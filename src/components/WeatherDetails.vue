@@ -11,6 +11,7 @@ interface CurrentWeather {
 
 defineProps<{
   weather: CurrentWeather
+  tempSymbol: string
 }>()
 </script>
 
