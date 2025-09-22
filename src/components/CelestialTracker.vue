@@ -1,11 +1,15 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { formatTimezoneOffset } from '../utils/formatters'
+
 interface CelestialData {
   sunrise: number
   sunset: number
   moonPhase: number
+  timezone: number // Timezone offset in seconds from UTC
 }
 
-defineProps<{
+const props = defineProps<{
   celestial: CelestialData
 }>()
 
@@ -17,6 +21,10 @@ const formatTime = (timestamp: number): string => {
     hour12: true 
   })
 }
+
+const timezoneAbbreviation = computed(() => {
+  return formatTimezoneOffset(props.celestial.timezone)
+})
 
 const getMoonPhaseDisplay = (phase: number): { icon: string, description: string } => {
   // Convert 0.0-1.0 to moon phases
@@ -40,12 +48,12 @@ const getMoonPhaseDisplay = (phase: number): { icon: string, description: string
       <div class="flex">
         <span class="text-terminal-white">SUNRISE</span>
         <span class="flex-1 text-terminal-blue">{{ '.'.repeat(15 - 'SUNRISE'.length) }}</span>
-        <span class="text-terminal-white">{{ formatTime(celestial.sunrise) }}</span>
+        <span class="text-terminal-white">{{ formatTime(celestial.sunrise) }} ({{ timezoneAbbreviation }})</span>
       </div>
       <div class="flex">
         <span class="text-terminal-white">SUNSET</span>
         <span class="flex-1 text-terminal-blue">{{ '.'.repeat(15 - 'SUNSET'.length) }}</span>
-        <span class="text-terminal-white">{{ formatTime(celestial.sunset) }}</span>
+        <span class="text-terminal-white">{{ formatTime(celestial.sunset) }} ({{ timezoneAbbreviation }})</span>
       </div>
       <div class="flex">
         <span class="text-terminal-white">MOON PHASE</span>

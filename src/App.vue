@@ -6,7 +6,6 @@ import WeatherDisplay from './components/WeatherDisplay.vue'
 import WeatherDetails from './components/WeatherDetails.vue'
 import ForecastDisplay from './components/ForecastDisplay.vue'
 import CelestialTracker from './components/CelestialTracker.vue'
-import SystemStatus from './components/SystemStatus.vue'
 
 type Unit = 'metric' | 'imperial'
 
@@ -32,6 +31,7 @@ export interface CelestialData {
   sunrise: number
   sunset: number
   moonPhase: number
+  timezone: number // Timezone offset in seconds from UTC
 }
 
 export interface SystemStatus {
@@ -64,6 +64,7 @@ interface WeatherApiResponse {
     sunrise: number
     sunset: number
   }
+  timezone: number // Timezone offset in seconds from UTC
 }
 
 interface ForecastApiItem {
@@ -279,7 +280,8 @@ const getWeather = async (city: string, unit: Unit = 'metric') => {
       const realCelestialData = {
         sunrise: weatherData.sys.sunrise,
         sunset: weatherData.sys.sunset,
-        moonPhase: getCurrentMoonPhase() // Calculate current moon phase
+        moonPhase: getCurrentMoonPhase(), // Calculate current moon phase
+        timezone: weatherData.timezone // Timezone offset in seconds from UTC
       }
       
       // Use real system status data from the API - store raw Celsius values
@@ -402,7 +404,8 @@ const getWeatherByCoordinates = async (lat: number, lon: number, displayName: st
       const realCelestialData = {
         sunrise: weatherData.sys.sunrise,
         sunset: weatherData.sys.sunset,
-        moonPhase: getCurrentMoonPhase() // Calculate current moon phase
+        moonPhase: getCurrentMoonPhase(), // Calculate current moon phase
+        timezone: weatherData.timezone // Timezone offset in seconds from UTC
       }
       
       // Use real system status data from the API - store raw Celsius values
@@ -557,10 +560,9 @@ onMounted(() => {
       <!-- New enhanced panels -->
       <div
         v-if="displayWeather && celestialData && !weatherError"
-        class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4"
+        class="mt-4"
       >
         <CelestialTracker :celestial="celestialData" />
-        <SystemStatus v-if="displaySystemStatus" :status="displaySystemStatus" :temp-symbol="tempSymbol" />
       </div>
       
       <div
