@@ -2,7 +2,7 @@
 
 A retro-futuristic weather application inspired by classic VCR/Teletext "blue screen" terminals — compact, no-scroll, and fast.
 
-## ✨ Features
+## Features
 
 * **Cancellable, Cached Search:** Four-stage search (prefix city → prefix country → exact city → exact country) with latest-only cancellation, retry/backoff, and API response caching.
 * **Weather-Validated Suggestions:** Each suggestion gets prechecked against OpenWeather data; badges show [--]/[CHK]/[OK] as validation progresses.
@@ -12,7 +12,7 @@ A retro-futuristic weather application inspired by classic VCR/Teletext "blue sc
 * **Celestial + Atmospheric Panels:** Sunrise/sunset, moon phase, humidity, pressure, wind; matching terminal styling.
 * **Forecast with Dates:** Five-day forecast includes a compact date next to each weekday and a retro precipitation bar.
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 * **Framework:** Vue 3 (Composition API)
 * **Language:** TypeScript
@@ -22,7 +22,7 @@ A retro-futuristic weather application inspired by classic VCR/Teletext "blue sc
     * OpenWeatherMap (for weather data)
     * GeoDB Cities (for location searching)
 
-## 🚀 Setup and Installation
+## Setup and Installation
 
 1.  Clone the repository:
     ```bash
@@ -42,11 +42,11 @@ A retro-futuristic weather application inspired by classic VCR/Teletext "blue sc
     npm run dev
     ```
 
-## 📱 Live Demo
+## Live Demo
 
 If deploying to GitHub Pages, set `base` in `vite.config.js` to your repo name and publish the `dist` folder. A demo link can go here.
 
-## 🎮 Usage
+## Usage
 
 1. Type at least 2 characters to search cities or countries
 2. Use ↑/↓ to navigate results, Enter to select
@@ -54,7 +54,7 @@ If deploying to GitHub Pages, set `base` in `vite.config.js` to your repo name a
 4. Toggle °C/°F under the temperature (instant, no refetch)
 5. Forecast shows weekday with a date and a precipitation bar
 
-## 🎨 Design Philosophy
+## Design Philosophy
 
 The **Weather Terminal** embraces a nostalgic aesthetic reminiscent of:
 - **VCR Blue Screen Interfaces** from the 1980s
@@ -62,7 +62,7 @@ The **Weather Terminal** embraces a nostalgic aesthetic reminiscent of:
 - **Teletext Broadcasting** with monospace fonts and block layouts
 - **CRT Monitor Effects** with subtle scanlines and glow effects
 
-## 🔧 Development
+## Development
 
 ### Available Scripts
 
@@ -97,7 +97,7 @@ VITE_RAPIDAPI_KEY=your_rapidapi_key_here
    - Subscribe to the free tier
    - Copy your API key
 
-## 🏗️ Architecture
+## Architecture
 
 ### Core Components
 
@@ -116,11 +116,11 @@ VITE_RAPIDAPI_KEY=your_rapidapi_key_here
 - **Smooth Unit Conversion:** Client-side conversion for temps and wind
 - **Compact No-Scroll Layout:** Tight paddings, fixed terminal pane, edge-hugging grid
 
-## 🌐 Deployment
+## Deployment
 
 You can deploy to any static host (Vercel/Netlify/GitHub Pages). For GitHub Pages, set `base` in `vite.config.js`, run `npm run build`, then publish `dist`.
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -128,11 +128,11 @@ You can deploy to any static host (Vercel/Netlify/GitHub Pages). For GitHub Page
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🎯 Acknowledgments
+## Acknowledgments
 
 - **OpenWeatherMap** for reliable weather data
 - **GeoDB Cities** for comprehensive location search
@@ -140,7 +140,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Tailwind CSS** for utility-first styling
 - **Vite** for lightning-fast development experience
 
-## 📞 Support
+## Support
 
 If you encounter any issues or have questions:
 
@@ -150,4 +150,4 @@ If you encounter any issues or have questions:
 
 ---
 
-**Built with ❤️ and nostalgia for the golden age of computing**
+Built with care and nostalgia for the golden age of computing

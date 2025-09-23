@@ -27,14 +27,22 @@
     </div>
 
     <!-- Dynamic Status Bar -->
-  <div class="mt-2 text-sm text-[#419bfb]" style="font-family: 'VT323', 'IBM Plex Mono', monospace; font-size: 1.05rem;">
+    <div
+      class="mt-2 text-sm text-[#419bfb]"
+      style="font-family: 'VT323', 'IBM Plex Mono', monospace; font-size: 1.05rem;"
+      aria-live="polite"
+      aria-atomic="true"
+    >
       <span>{{ statusBarText }}</span>
     </div>
 
     <!-- PERMANENT TERMINAL OUTPUT PANE - Always visible, never flickers -->
     <div 
       class="mt-2 border border-[#419bfb] bg-[#011173] rounded-md p-2 h-40 overflow-y-auto"
-  style="font-family: 'VT323', 'IBM Plex Mono', monospace; font-size: 1.05rem;"
+      style="font-family: 'VT323', 'IBM Plex Mono', monospace; font-size: 1.05rem;"
+      aria-live="polite"
+      aria-relevant="additions text"
+      aria-label="Search terminal output"
     >
       <!-- IDLE STATE: Waiting for user input -->
       <div v-if="searchStatus === 'idle'" class="text-gray-400 text-sm">
@@ -241,8 +249,8 @@ const handleSearchInput = () => {
         searchStatus.value = 'error'
         searchError.value = 'Invalid search pattern'
         
-        addTerminalOutput(`❌ INVALID INPUT: "${query}"`)
-        addTerminalOutput(`🤖 SYSTEM: Please enter a real city or country name`)
+        addTerminalOutput(`[INVALID] INPUT: "${query}"`)
+        addTerminalOutput(`[SYSTEM] Please enter a real city or country name`)
         
         // Do NOT proceed with any search
         return

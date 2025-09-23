@@ -9,10 +9,12 @@ interface CurrentWeather {
   iconCode: number
 }
 
-const { weather, tempSymbol, unitToggleText } = defineProps<{
+const { weather, tempSymbol, unitToggleText, feelsLike, localTime } = defineProps<{
   weather: CurrentWeather
   tempSymbol: string
   unitToggleText: string
+  feelsLike?: number | null
+  localTime?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -37,6 +39,9 @@ const derivedCountry = computed(() => (weather.city?.includes(',') ? weather.cit
         <div class="text-terminal-blue font-bold tracking-wide leading-tight text-2xl md:text-3xl lg:text-4xl whitespace-nowrap overflow-hidden text-ellipsis">
           {{ derivedCity }}
         </div>
+        <div v-if="localTime" class="text-terminal-white text-xs md:text-sm opacity-90 mt-1">
+          LOCAL TIME: {{ localTime }}
+        </div>
         <div v-if="derivedCountry" class="text-terminal-blue font-bold tracking-wide leading-tight text-base md:text-lg lg:text-xl whitespace-nowrap overflow-hidden text-ellipsis mt-1">
           {{ derivedCountry }}
         </div>
@@ -49,6 +54,7 @@ const derivedCountry = computed(() => (weather.city?.includes(',') ? weather.cit
           <span class="order-2 text-2xl md:text-3xl lg:text-4xl">{{ weather.temperature }}{{ tempSymbol }}</span>
         </div>
         <div class="text-terminal-white">{{ weather.condition }}</div>
+        <div v-if="feelsLike != null" class="text-terminal-blue text-xs mt-0.5">FEELS LIKE: {{ feelsLike }}{{ tempSymbol }}</div>
         <button
           class="mt-1 text-xs text-terminal-blue cursor-pointer transition-colors border border-terminal-blue px-2 py-1 hover:bg-terminal-blue hover:text-terminal-bg inline-flex items-center gap-1"
           @click="handleToggleUnit"

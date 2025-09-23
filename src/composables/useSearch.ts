@@ -1,25 +1,16 @@
 /**
  * Search Composable
  * Advanced four-stage search orchestrator with validation
- * Provides unified search functionality across cities and c      if (stage2Result.status === 'success' && stage2Result.data.length > 0) {
-        const stage2Candidates = convertCountriesToUnified(stage2Result.data)
-        addTerminalOutput(`   📋 Found ${stage2Candidates.length} country candidates - validating weather data...`)
-        
-        // Validate each candidate in real-time
-        const validatedCountries = await validateCandidates(stage2Candidates, 'countries')
-        allValidatedSuggestions.push(...validatedCountries)
-        addTerminalOutput(`   ✅ Confirmed ${validatedCountries.length} countries with weather data`)
-      } else {
-        addTerminalOutput(`   ❌ No country candidates found for prefix search`)
-      }*/
+ * Provides unified search functionality across cities and countries.
+ */
 
 import { ref } from 'vue'
 import type { UnifiedSuggestion, SearchStatus, CitySuggestion, CountrySuggestion } from '../types'
-import { 
-  fetchCitySuggestions, 
-  fetchCountrySuggestions, 
-  fetchExactCityMatch, 
-  fetchExactCountryMatch 
+import {
+  fetchCitySuggestions,
+  fetchCountrySuggestions,
+  fetchExactCityMatch,
+  fetchExactCountryMatch
 } from '../api/geoDB'
 import { validateSuggestion } from '../api/openWeather'
 
@@ -88,39 +79,32 @@ export function useSearch() {
     apiName: string,
     maxAttempts: number = 3
   ): Promise<{ status: 'success' | 'error'; data: T[]; error?: string }> => {
-    addTerminalOutput(`🔄 Starting ${apiName}...`)
-    
+    addTerminalOutput(`[START] ${apiName}...`)
+
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        addTerminalOutput(`📡 ${apiName} - Attempt ${attempt}/${maxAttempts}`)
+        addTerminalOutput(`[RETRY] ${apiName} - Attempt ${attempt}/${maxAttempts}`)
         const results = await searchFunction(query)
-        addTerminalOutput(`✅ ${apiName} - Success! Found ${results.length} results`)
+        addTerminalOutput(`[OK] ${apiName} - Success. Found ${results.length} results`)
         return { status: 'success', data: results }
       } catch (error: any) {
-        addTerminalOutput(`❌ ${apiName} - Attempt ${attempt} failed: ${error.message}`)
-        
+        addTerminalOutput(`[ERROR] ${apiName} - Attempt ${attempt} failed: ${error?.message ?? 'unknown error'}`)
+
         if (attempt < maxAttempts) {
-          const delay = Math.pow(2, attempt) * 1000 // Exponential backoff
-          addTerminalOutput(`⏳ ${apiName} - Retrying in ${delay}ms...`)
+          const delay = Math.pow(2, attempt) * 250 // Exponential backoff, faster cadence
+          addTerminalOutput(`[WAIT] ${apiName} - Retrying in ${delay}ms...`)
           await new Promise(resolve => setTimeout(resolve, delay))
         }
       }
     }
-    
+
     const errorMsg = `${apiName} failed after ${maxAttempts} attempts`
-    addTerminalOutput(`💀 ${errorMsg}`)
+    addTerminalOutput(`[FAIL] ${errorMsg}`)
     return { status: 'error', data: [], error: errorMsg }
   }
 
   /**
    * Advanced Four-Stage Search Logic with Weather Pre-Validation
-   * Stage 1: Prefix Cities - Fast search for city name prefixes
-   * Stage 2: Prefix Countries - Search for country name prefixes  
-   * Stage 3: Exact Cities - Fallback exact city match
-   * Stage 4: Exact Countries - Fallback exact country match
-   * 
-   * NEW: Each stage now includes real-time weather validation
-   * ENHANCED: Pre-filtering to avoid unnecessary API calls
    */
   const performSearch = async (query: string): Promise<void> => {
     if (!query.trim()) {
@@ -135,8 +119,8 @@ export function useSearch() {
       suggestions.value = []
       searchStatus.value = 'error'
       searchError.value = 'Invalid search pattern'
-      addTerminalOutput(`❌ BLOCKED: "${query}" - invalid pattern detected`)
-      addTerminalOutput(`🛡️  SYSTEM: Input validation prevents unnecessary API calls`)
+      addTerminalOutput(`[BLOCKED] "${query}" - invalid pattern detected`)
+      addTerminalOutput(`[SYSTEM] Input validation prevents unnecessary API calls`)
       return
     }
 
@@ -151,9 +135,9 @@ export function useSearch() {
     const startTime = Date.now()
 
     try {
-      addTerminalOutput(`🔍 Starting 4-stage search for: "${query}"`)
-      addTerminalOutput(`� Suggestions are shown immediately; weather loads on selection`)
-  let allSuggestions: UnifiedSuggestion[] = []
+      addTerminalOutput(`[SEARCH] Starting 4-stage search for: "${query}"`)
+      addTerminalOutput(`[INFO] Suggestions are shown immediately; weather loads on selection`)
+      let allSuggestions: UnifiedSuggestion[] = []
 
       // Local helper to push validated suggestions progressively and respect latest-only gating
       const pushIfLatest = (items: UnifiedSuggestion[]) => {
@@ -167,23 +151,23 @@ export function useSearch() {
         }
       }
 
-  // AbortController for this search's validations
-  const abortController = new AbortController()
-  currentAbortController = abortController
+      // AbortController for this search's validations
+      const abortController = new AbortController()
+      currentAbortController = abortController
 
       // === STAGE 1: Prefix Cities with Validation ===
-      addTerminalOutput(`🏙️  Stage 1: Prefix Cities search...`)
+      addTerminalOutput(`[STAGE 1] Prefix Cities search...`)
       // Stage 1: check cache first to reduce latency
       const cachedCities = cityApiCache.get(query)
       const stage1Result = cachedCities
         ? { status: 'success' as const, data: cachedCities }
         : await tryPersistentApiSearch(fetchCitySuggestions, query, 'Stage 1 - Prefix Cities')
-      
+
       if (stage1Result.status === 'success' && stage1Result.data.length > 0) {
-        const stage1Candidates = convertCitiesToUnified(stage1Result.data)
+        const stage1Candidates = convertCitiesToUnified(stage1Result.data as CitySuggestion[])
         // Cache raw API response for this query
         if (!cachedCities) cityApiCache.set(query, stage1Result.data as CitySuggestion[])
-        addTerminalOutput(`   📋 Found ${stage1Candidates.length} city candidates`)
+        addTerminalOutput(`   [INFO] Found ${stage1Candidates.length} city candidates`)
         // Stream and mark as validating; kick off background pre-validation
         const prevalidating = stage1Candidates.map(c => ({ ...c, validating: true }))
         pushIfLatest(prevalidating)
@@ -197,20 +181,20 @@ export function useSearch() {
           ))
         })()
       } else {
-        addTerminalOutput(`   ❌ No city candidates found for prefix search`)
+        addTerminalOutput(`   [NONE] No city candidates found for prefix search`)
       }
 
       // === STAGE 2: Prefix Countries with Validation ===
-      addTerminalOutput(`🌍 Stage 2: Prefix Countries search...`)
+      addTerminalOutput(`[STAGE 2] Prefix Countries search...`)
       const cachedCountries = countryApiCache.get(query)
       const stage2Result = cachedCountries
         ? { status: 'success' as const, data: cachedCountries }
         : await tryPersistentApiSearch(fetchCountrySuggestions, query, 'Stage 2 - Prefix Countries')
-      
+
       if (stage2Result.status === 'success' && stage2Result.data.length > 0) {
-  const stage2Candidates = convertCountriesToUnified(stage2Result.data)
-  if (!cachedCountries) countryApiCache.set(query, stage2Result.data as CountrySuggestion[])
-        addTerminalOutput(`   📋 Found ${stage2Candidates.length} country candidates`)
+        const stage2Candidates = convertCountriesToUnified(stage2Result.data as CountrySuggestion[])
+        if (!cachedCountries) countryApiCache.set(query, stage2Result.data as CountrySuggestion[])
+        addTerminalOutput(`   [INFO] Found ${stage2Candidates.length} country candidates`)
         const prevalidating = stage2Candidates.map(c => ({ ...c, validating: true }))
         pushIfLatest(prevalidating)
         ;(async () => {
@@ -222,17 +206,17 @@ export function useSearch() {
           ))
         })()
       } else {
-        addTerminalOutput(`   ❌ No country candidates found for prefix search`)
+        addTerminalOutput(`   [NONE] No country candidates found for prefix search`)
       }
 
       // === STAGE 3: Exact Cities (Fallback) with Validation ===
       if (allSuggestions.length === 0) {
-        addTerminalOutput(`🔍 Stage 3: Exact City fallback search...`)
+        addTerminalOutput(`[STAGE 3] Exact City fallback search...`)
         const stage3Result = await tryPersistentApiSearch(fetchExactCityMatch, query, 'Stage 3 - Exact Cities')
-        
+
         if (stage3Result.status === 'success' && stage3Result.data.length > 0) {
-          const stage3Candidates = convertCitiesToUnified(stage3Result.data)
-          addTerminalOutput(`   📋 Found ${stage3Candidates.length} exact city matches`)
+          const stage3Candidates = convertCitiesToUnified(stage3Result.data as CitySuggestion[])
+          addTerminalOutput(`   [INFO] Found ${stage3Candidates.length} exact city matches`)
           const prevalidating = stage3Candidates.map(c => ({ ...c, validating: true }))
           pushIfLatest(prevalidating)
           ;(async () => {
@@ -244,18 +228,18 @@ export function useSearch() {
             ))
           })()
         } else {
-          addTerminalOutput(`   ❌ No exact city matches found`)
+          addTerminalOutput(`   [NONE] No exact city matches found`)
         }
       }
 
       // === STAGE 4: Exact Countries (Final Fallback) with Validation ===
       if (allSuggestions.length === 0) {
-        addTerminalOutput(`🌐 Stage 4: Exact Country fallback search...`)
+        addTerminalOutput(`[STAGE 4] Exact Country fallback search...`)
         const stage4Result = await tryPersistentApiSearch(fetchExactCountryMatch, query, 'Stage 4 - Exact Countries')
-        
+
         if (stage4Result.status === 'success' && stage4Result.data.length > 0) {
-          const stage4Candidates = convertCountriesToUnified(stage4Result.data)
-          addTerminalOutput(`   📋 Found ${stage4Candidates.length} exact country matches`)
+          const stage4Candidates = convertCountriesToUnified(stage4Result.data as CountrySuggestion[])
+          addTerminalOutput(`   [INFO] Found ${stage4Candidates.length} exact country matches`)
           const prevalidating = stage4Candidates.map(c => ({ ...c, validating: true }))
           pushIfLatest(prevalidating)
           ;(async () => {
@@ -267,7 +251,7 @@ export function useSearch() {
             ))
           })()
         } else {
-          addTerminalOutput(`   ❌ No exact country matches found`)
+          addTerminalOutput(`   [NONE] No exact country matches found`)
         }
       }
 
@@ -276,12 +260,12 @@ export function useSearch() {
       if (thisSearchId !== currentSearchId) return // stale
       if (suggestions.value.length > 0) {
         searchStatus.value = 'success'
-        addTerminalOutput(`🎯 Search completed in ${searchTime}ms - ${suggestions.value.length} suggestions`)        
+        addTerminalOutput(`[DONE] Search completed in ${searchTime}ms - ${suggestions.value.length} suggestions`)
       } else {
         suggestions.value = []
         searchStatus.value = 'no_results'
-        addTerminalOutput(`❌ No weather-validated results found after 4-stage search (${searchTime}ms)`)
-        addTerminalOutput(`🤖 SUGGESTION: Check spelling or try a different location name`)
+        addTerminalOutput(`[NONE] No weather-validated results found after 4-stage search (${searchTime}ms)`)
+        addTerminalOutput(`[SUGGESTION] Check spelling or try a different location name`)
       }
 
     } catch (error) {
@@ -289,21 +273,21 @@ export function useSearch() {
       searchError.value = error instanceof Error ? error.message : 'Search failed'
       searchStatus.value = 'error'
       suggestions.value = []
-      addTerminalOutput(`🚫 Search error: ${searchError.value}`)
+      addTerminalOutput(`[ERROR] Search error: ${searchError.value}`)
     }
   }
 
   /**
-   * NEW: Enhanced pre-validation to completely prevent invalid searches
+   * Enhanced pre-validation to prevent invalid searches
    */
   const isValidSearchQuery = (query: string): boolean => {
     // Basic checks
     if (!query || query.length < 2) return false
-    
+
     // Must contain only valid characters
     if (!/^[a-zA-Z\s\-']+$/.test(query)) return false
-    
-    // Comprehensive gibberish patterns - matching CitySearch.vue
+
+    // Gibberish patterns
     const gibberishPatterns = [
       /^[aeiou]{3,}$/i,           // All vowels: "aaa", "eee", "iii"
       /^[bcdfg-np-tv-z]{4,}$/i,  // All consonants: "bbbbb", "zzzzz"
@@ -313,60 +297,32 @@ export function useSearch() {
       /^(test|asdf|hjkl|poiu|mnbv|tyui)/i, // Common test strings
       /^(.)\1(.)\2+$/i,          // Alternating patterns: "abab", "1212"
       /^[qwertyuiop]+$/i,        // Top keyboard row
-      /^[asdfghjkl]+$/i,         // Middle keyboard row  
+      /^[asdfghjkl]+$/i,         // Middle keyboard row
       /^[zxcvbnm]+$/i,           // Bottom keyboard row
-      /^[aeiouAEIOU]{2,}$/,      // Multiple vowels only
-      /^[bcdfg-np-tv-zBCDFG-NP-TV-Z]{3,}$/ // Multiple consonants only
+      /^[aeiouAEIOU]{2,}$/,
+      /^[bcdfg-np-tv-zBCDFG-NP-TV-Z]{3,}$/
     ]
-    
+
     const isGibberish = gibberishPatterns.some(pattern => pattern.test(query))
     if (isGibberish) return false
-    
+
     // Must have both vowels and consonants for realistic words (length > 2)
     if (query.length > 2) {
       const hasVowel = /[aeiouAEIOU]/.test(query)
       const hasConsonant = /[bcdfg-np-tv-zBCDFG-NP-TV-Z]/.test(query)
       if (!hasVowel || !hasConsonant) return false
     }
-    
+
     // Must not start or end with spaces/hyphens
     if (/^[\s\-]|[\s\-]$/.test(query)) return false
-    
+
     // Length bounds
     if (query.length > 50) return false
-    
+
     return true
   }
 
-  /**
-   * OPTIMIZED: Validates multiple candidates with faster parallel processing
-   * Returns only suggestions that have confirmed weather data
-   */
-  const validateCandidates = async (candidates: UnifiedSuggestion[], type: string): Promise<UnifiedSuggestion[]> => {
-    if (candidates.length === 0) return []
-    
-    addTerminalOutput(`   🔍 Fast-validating ${candidates.length} ${type}...`)
-    
-    // Process first 5 candidates in parallel for speed
-    const topCandidates = candidates.slice(0, 5)
-    
-    const validationPromises = topCandidates.map(async (candidate) => {
-      try {
-        const isValid = await validateSuggestion(candidate)
-        return isValid ? candidate : null
-      } catch (error) {
-        return null
-      }
-    })
-    
-    const results = await Promise.all(validationPromises)
-    const validatedSuggestions = results.filter((result): result is UnifiedSuggestion => result !== null)
-    
-    addTerminalOutput(`   ✅ Validation: ${validatedSuggestions.length}/${topCandidates.length} confirmed`)
-    return validatedSuggestions
-  }
-
-  // Faster, cached batch validator used during progressive streaming
+  // Cached batch validator used during progressive streaming
   const fastValidateBatch = async (candidates: UnifiedSuggestion[], signal: AbortSignal): Promise<UnifiedSuggestion[]> => {
     const promises = candidates.map(async (c) => {
       // Build cache key
@@ -393,23 +349,22 @@ export function useSearch() {
 
   /**
    * Validates a suggestion using OpenWeatherMap API
-   * Ensures the location actually exists and has weather data
    */
   const validateAndSelectSuggestion = async (suggestion: UnifiedSuggestion): Promise<boolean> => {
-    addTerminalOutput(`🔍 Validating ${suggestion.name}...`)
-    
+    addTerminalOutput(`[VALIDATE] ${suggestion.name}...`)
+
     try {
       const isValid = await validateSuggestion(suggestion)
-      
+
       if (isValid) {
-        addTerminalOutput(`✅ ${suggestion.name} validated successfully`)
+        addTerminalOutput(`[OK] ${suggestion.name} validated successfully`)
         return true
       } else {
-        addTerminalOutput(`❌ ${suggestion.name} failed validation`)
+        addTerminalOutput(`[INVALID] ${suggestion.name} failed validation`)
         return false
       }
     } catch (error) {
-      addTerminalOutput(`🚫 Validation error for ${suggestion.name}: ${error}`)
+      addTerminalOutput(`[ERROR] Validation error for ${suggestion.name}: ${error}`)
       return false
     }
   }
@@ -437,7 +392,7 @@ export function useSearch() {
     suggestions,
     searchError,
     terminalOutput,
-    
+
     // Actions
     performSearch,
     validateAndSelectSuggestion,

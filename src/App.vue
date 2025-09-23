@@ -8,6 +8,7 @@ import WeatherDisplay from './components/WeatherDisplay.vue'
 import WeatherDetails from './components/WeatherDetails.vue'
 import ForecastDisplay from './components/ForecastDisplay.vue'
 import CelestialTracker from './components/CelestialTracker.vue'
+import { formatTimezoneOffset } from './utils/formatters'
 
 type Unit = 'metric' | 'imperial'
 
@@ -112,6 +113,15 @@ const error = ref('')
 const weatherError = ref<string | null>(null) // Dedicated error state for weather API 404s
 const selectedUnit = ref<Unit>('metric')
 const isAppLoading = ref<boolean>(false) // Global loading state for responsiveness
+// Simple in-memory cache for last city weather data
+type CacheEntry = {
+  current: CurrentWeather
+  forecast: ForecastItem[]
+  celestial: CelestialData
+  system: SystemStatus
+  timestamp: number
+}
+const weatherCache = new Map<string, CacheEntry>()
 
 // Use API key from environment variables
 // Make sure you have VITE_OPENWEATHER_API_KEY in your .env file
@@ -123,7 +133,7 @@ const MINIMUM_LOADING_TIME = 300 // shorter minimum to keep snappy UX
 
 // Check if API key is loaded
 if (!API_KEY) {
-  console.error('❌ OpenWeatherMap API key not found! Make sure VITE_OPENWEATHER_API_KEY is set in your .env file')
+  console.error('OpenWeatherMap API key not found. Make sure VITE_OPENWEATHER_API_KEY is set in your .env file')
 }
 
 // Delay Promise for artificial loading time
@@ -222,6 +232,9 @@ const displaySystemStatus = computed(() => {
 // Temperature unit toggle functionality
 const toggleUnit = () => {
   selectedUnit.value = selectedUnit.value === 'metric' ? 'imperial' : 'metric'
+  try {
+    localStorage.setItem('weather_unit', selectedUnit.value)
+  } catch {}
 }
 
 const unitToggleText = computed(() => {
@@ -232,9 +245,10 @@ const tempSymbol = computed(() => {
   return selectedUnit.value === 'metric' ? '°C' : '°F'
 })
 
-const getWeather = async (city: string, unit: Unit = 'metric') => {
+const getWeather = async (city: string, unit: Unit = 'metric', opts: { silent?: boolean } = {}) => {
+  const { silent = false } = opts
   // Set loading state IMMEDIATELY for instant feedback
-  isAppLoading.value = true
+  if (!silent) isAppLoading.value = true
   
   try {
     error.value = ''
@@ -251,7 +265,7 @@ const getWeather = async (city: string, unit: Unit = 'metric') => {
     const weatherUrl = `${BASE_URL}/weather?q=${city}&appid=${API_KEY}&units=metric`
     const forecastUrl = `${BASE_URL}/forecast?q=${city}&appid=${API_KEY}&units=metric`
 
-    const weatherPromise = axios.get<WeatherApiResponse>(weatherUrl, { timeout: 15000 })
+  const weatherPromise = axios.get<WeatherApiResponse>(weatherUrl, { timeout: 15000 })
     const forecastPromise = axios.get<{list: ForecastApiItem[]}>(forecastUrl, { timeout: 20000 })
 
     const weatherResponse = await weatherPromise
@@ -285,6 +299,16 @@ const getWeather = async (city: string, unit: Unit = 'metric') => {
       uvIndex: await getUVIndex(weatherData.coord.lat, weatherData.coord.lon),
       visibility: weatherData.visibility || 10000
     }
+
+    // Update cache with latest data
+    const cacheKey = `name:${weatherData.name.toLowerCase()}`
+    weatherCache.set(cacheKey, {
+      current: currentWeather.value,
+      forecast: forecast.value,
+      celestial: celestialData.value,
+      system: systemStatus.value,
+      timestamp: Date.now()
+    } as CacheEntry)
 
     // Ensure a minimal overlay time but don't block longer than needed
     const elapsed = performance.now() - startedAt
@@ -333,15 +357,16 @@ const getWeather = async (city: string, unit: Unit = 'metric') => {
     
   } finally {
     // ALWAYS clear loading state - guarantees it's turned off even on errors
-    isAppLoading.value = false
+    if (!silent) isAppLoading.value = false
   }
 }
 
 // COORDINATE-BASED WEATHER FETCHING - The Universal Solution
 // This eliminates the GeoDB vs OpenWeatherMap naming conflict by using lat/lon
-const getWeatherByCoordinates = async (lat: number, lon: number, displayName: string, unit: Unit = 'metric') => {
+const getWeatherByCoordinates = async (lat: number, lon: number, displayName: string, unit: Unit = 'metric', opts: { silent?: boolean } = {}) => {
+  const { silent = false } = opts
   // Set loading state IMMEDIATELY for instant feedback
-  isAppLoading.value = true
+  if (!silent) isAppLoading.value = true
   
   try {
     error.value = ''
@@ -358,7 +383,7 @@ const getWeatherByCoordinates = async (lat: number, lon: number, displayName: st
     const weatherUrl = `${BASE_URL}/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`
     const forecastUrl = `${BASE_URL}/forecast?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`
 
-    const weatherPromise = axios.get<WeatherApiResponse>(weatherUrl, { timeout: 15000 })
+  const weatherPromise = axios.get<WeatherApiResponse>(weatherUrl, { timeout: 15000 })
     const forecastPromise = axios.get<{list: ForecastApiItem[]}>(forecastUrl, { timeout: 20000 })
 
     const weatherResponse = await weatherPromise
@@ -409,6 +434,15 @@ const getWeatherByCoordinates = async (lat: number, lon: number, displayName: st
       .catch((e) => {
         console.warn('Forecast unavailable or delayed', e)
       })
+    // Update cache with latest data (coordinate key)
+    const cacheKey = `coord:${lat.toFixed(3)},${lon.toFixed(3)}|${displayName.toLowerCase()}`
+    weatherCache.set(cacheKey, {
+      current: currentWeather.value!,
+      forecast: forecast.value,
+      celestial: celestialData.value!,
+      system: systemStatus.value!,
+      timestamp: Date.now()
+    })
     
   } catch (err: unknown) {
     const errorObj = err as { response?: { status?: number }; code?: string; message?: string }
@@ -434,22 +468,58 @@ const getWeatherByCoordinates = async (lat: number, lon: number, displayName: st
     
   } finally {
     // ALWAYS clear loading state - guarantees it's turned off even on errors
-    isAppLoading.value = false
+    if (!silent) isAppLoading.value = false
   }
 }
 
 const handleCitySelected = (cityData: { name: string; displayName: string; type: string; country?: string; countryCode?: string; lat?: number; lon?: number }) => {
-  // Use coordinates for weather fetching if available (preferred method)
-  if (cityData.lat && cityData.lon) {
-    getWeatherByCoordinates(cityData.lat, cityData.lon, cityData.displayName || cityData.name, 'metric')
+  // Build cache key
+  const byCoord = cityData.lat != null && cityData.lon != null
+  const cacheKey = byCoord
+    ? `coord:${cityData.lat!.toFixed(3)},${cityData.lon!.toFixed(3)}|${(cityData.displayName || cityData.name).toLowerCase()}`
+    : `name:${(cityData.displayName || cityData.name).toLowerCase()}`
+
+  const cached = weatherCache.get(cacheKey)
+  if (cached) {
+    // Instantly hydrate UI from cache without overlay
+    currentWeather.value = cached.current
+    forecast.value = cached.forecast
+    celestialData.value = cached.celestial
+    systemStatus.value = cached.system
+  }
+
+  // Refresh in background (silent if we had cache)
+  if (byCoord) {
+    getWeatherByCoordinates(cityData.lat!, cityData.lon!, cityData.displayName || cityData.name, 'metric', { silent: !!cached })
   } else {
-    // Fallback to name-based search for countries or incomplete data
     const searchTerm = cityData.displayName || cityData.name
-    getWeather(searchTerm, 'metric')
+    getWeather(searchTerm, 'metric', { silent: !!cached })
   }
 }
 
+// Local time label computed from timezone offset
+const localTimeLabel = computed(() => {
+  if (!celestialData.value) return ''
+  const offset = celestialData.value.timezone
+  // Compute local time from offset
+  const now = new Date()
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000
+  const localMs = utcMs + offset * 1000
+  const hh = new Date(localMs).getHours().toString().padStart(2, '0')
+  const mm = new Date(localMs).getMinutes().toString().padStart(2, '0')
+  const tz = formatTimezoneOffset(offset)
+  return `${hh}:${mm} ${tz}`
+})
+
 onMounted(() => {
+  // Restore unit preference
+  try {
+    const saved = localStorage.getItem('weather_unit') as Unit | null
+    if (saved === 'imperial' || saved === 'metric') {
+      selectedUnit.value = saved
+    }
+  } catch {}
+
   // Always fetch in metric to store raw data
   getWeather('Jakarta', 'metric')
 })
@@ -459,7 +529,7 @@ onMounted(() => {
   <!-- VCR TRACKING LOADING SCREEN -->
   <div v-if="isAppLoading" class="loading-overlay" aria-label="loading">
     <div class="loading-content">
-      <span class="blinking-cursor">█</span>
+      <span>Loading .... </span><span class="blinking-cursor">█</span>
     </div>
   </div>
 
@@ -504,6 +574,8 @@ onMounted(() => {
           :weather="displayWeather" 
           :temp-symbol="tempSymbol" 
           :unit-toggle-text="unitToggleText" 
+          :feels-like="displaySystemStatus?.feelsLike ?? null"
+          :local-time="localTimeLabel"
           @toggle-unit="toggleUnit" 
         />
 
