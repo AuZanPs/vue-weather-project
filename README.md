@@ -25,7 +25,7 @@ A retro-futuristic weather application inspired by classic VCR and Teletext "blu
 
 1.  Clone the repository:
     ```bash
-    git clone https://github.com/your-username/your-repo-name.git
+    git clone https://github.com/AuZanPs/vue-weather-project.git
     ```
 2.  Install dependencies:
     ```bash
@@ -43,7 +43,9 @@ A retro-futuristic weather application inspired by classic VCR and Teletext "blu
 
 ## 📱 Live Demo
 
-Visit the live application: [Weather Terminal v2.1](https://your-username.github.io/your-repo-name/)
+🌐 **Experience the Weather Terminal v2.1 live:** [https://auzanps.github.io/vue-weather-project/](https://auzanps.github.io/vue-weather-project/)
+
+*Note: The live demo will be available once GitHub Pages deployment completes (usually 2-3 minutes after pushing to main branch).*
 
 ## 🎮 Usage
 
@@ -136,6 +138,10 @@ This project is configured for automatic deployment to GitHub Pages using GitHub
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
 ## 🎯 Acknowledgments
 
 - **OpenWeatherMap** for reliable weather data
@@ -143,5 +149,15 @@ This project is configured for automatic deployment to GitHub Pages using GitHub
 - **Vue.js Team** for the excellent framework
 - **Tailwind CSS** for utility-first styling
 - **Vite** for lightning-fast development experience
+
+## 📞 Support
+
+If you encounter any issues or have questions:
+
+1. Check the [Issues](https://github.com/AuZanPs/vue-weather-project/issues) page
+2. Create a new issue with detailed information
+3. Follow the issue template for faster resolution
+
+---
 
 **Built with ❤️ and nostalgia for the golden age of computing**
