@@ -2,32 +2,39 @@
   <div class="relative">
     <!-- Search Input -->
     <div class="relative">
+      <!-- Leading search icon -->
+      <div class="absolute left-3 top-1/2 -translate-y-1/2 text-[#419bfb] opacity-80 pointer-events-none">
+        <Icon name="Search" :size="16" :stroke-width="2" aria-hidden="true" />
+      </div>
       <input
         v-model="searchQuery"
         @input="handleSearchInput"
         @keydown="handleKeyPress"
         placeholder="Enter city or country..."
-        class="w-full px-4 py-3 bg-[#011173] text-white placeholder-gray-400 border border-[#419bfb] rounded-md focus:outline-none focus:ring-2 focus:ring-[#419bfb]"
-        style="font-family: 'VT323', 'IBM Plex Mono', monospace;"
+        class="w-full pl-9 pr-10 py-3 bg-[#011173] text-white placeholder-gray-400 border border-[#419bfb] rounded-md focus:outline-none focus:ring-2 focus:ring-[#419bfb]"
+  style="font-family: 'VT323', 'IBM Plex Mono', monospace; font-size: 1.05rem;"
         type="text"
         autocomplete="off"
       />
       
       <!-- Search Status Indicator -->
       <div v-if="searchStatus === 'fetching'" class="absolute right-3 top-1/2 transform -translate-y-1/2">
-        <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-[#419bfb]"></div>
+        <!-- Retro CRT loader: pulsing block cursor -->
+        <div class="h-5 w-5 flex items-center justify-center" aria-label="loading">
+          <span class="text-[#419bfb] crt-pulse" style="font-family: 'VT323', 'IBM Plex Mono', monospace; font-size: 1.1rem;">█</span>
+        </div>
       </div>
     </div>
 
     <!-- Dynamic Status Bar -->
-    <div class="mt-2 text-sm text-[#419bfb]" style="font-family: 'VT323', 'IBM Plex Mono', monospace;">
-      {{ statusBarText }}
+  <div class="mt-2 text-sm text-[#419bfb]" style="font-family: 'VT323', 'IBM Plex Mono', monospace; font-size: 1.05rem;">
+      <span>{{ statusBarText }}</span>
     </div>
 
     <!-- PERMANENT TERMINAL OUTPUT PANE - Always visible, never flickers -->
     <div 
-      class="mt-2 border border-[#419bfb] bg-[#011173] rounded-md p-3 h-48 overflow-y-auto"
-      style="font-family: 'VT323', 'IBM Plex Mono', monospace;"
+      class="mt-2 border border-[#419bfb] bg-[#011173] rounded-md p-2 h-40 overflow-y-auto"
+  style="font-family: 'VT323', 'IBM Plex Mono', monospace; font-size: 1.05rem;"
     >
       <!-- IDLE STATE: Waiting for user input -->
       <div v-if="searchStatus === 'idle'" class="text-gray-400 text-sm">
@@ -37,11 +44,11 @@
         </div>
       </div>
 
-      <!-- FETCHING STATE: Search in progress -->
+      <!-- FETCHING STATE: Search in progress (kept concise to feel faster) -->
       <div v-else-if="searchStatus === 'fetching'" class="text-gray-300 text-sm">
-        <span class="text-[#419bfb]">> </span>SEARCHING AND VERIFYING WEATHER DATA...
+        <span class="text-[#419bfb]">> </span>COMPREHENSIVE SEARCH & VALIDATION IN PROGRESS...
         <div class="mt-2 text-xs text-gray-500">
-          <span class="text-[#419bfb]">> </span>Checking candidates against OpenWeatherMap
+          <span class="text-[#419bfb]">> </span>Accuracy Mode: Verifying all weather data sources
         </div>
       </div>
       
@@ -61,33 +68,43 @@
           <span v-if="selectedIndex === index" class="text-[#419bfb]">> </span>
           <span v-else class="opacity-0">> </span>
           {{ suggestion.displayName }}
-          <span class="text-xs text-gray-500 ml-2">
-            {{ suggestion.type === 'city' ? '[CITY]' : '[COUNTRY]' }}
-          </span>
+          <!-- Retro pre-validation badge -->
+          <span v-if="suggestion.validated" class="text-xs ml-2 text-green-400">[OK]</span>
+          <span v-else-if="suggestion.validating" class="text-xs ml-2 text-[#419bfb] opacity-80">[CHK]</span>
+          <span v-else class="text-xs ml-2 text-gray-400 opacity-70">[--]</span>
         </div>
       </div>
 
       <!-- SUCCESS STATE: No suggestions but search completed -->
       <div v-else-if="searchStatus === 'success' && suggestions.length === 0" class="text-gray-400 text-sm">
-        <span class="text-[#419bfb]">> </span>SEARCH COMPLETED - NO VERIFIED RESULTS
+        <span class="text-[#419bfb]">> </span>COMPREHENSIVE SEARCH COMPLETED
         <div class="mt-2 text-xs text-gray-500">
-          <span class="text-[#419bfb]">> </span>All candidates failed weather verification
+          <span class="text-[#419bfb]">> </span>No locations found with verified weather data
+        </div>
+        <div class="mt-1 text-xs text-gray-500">
+          <span class="text-[#419bfb]">> </span>System maintains 100% accuracy standards
         </div>
       </div>
       
       <!-- NO RESULTS STATE: Legitimate no results -->
       <div v-else-if="searchStatus === 'no_results'" class="text-gray-400 text-sm">
-        <span class="text-[#419bfb]">> </span>NO VERIFIED RESULTS FOUND FOR "{{ searchQuery }}"
+        <span class="text-[#419bfb]">> </span>NO WEATHER-VERIFIED RESULTS FOR "{{ searchQuery }}"
         <div class="mt-2 text-xs text-gray-500">
-          <span class="text-[#419bfb]">> </span>Try a different search term
+          <span class="text-[#419bfb]">> </span>Suggestion: Check spelling or try alternate names
+        </div>
+        <div class="mt-1 text-xs text-gray-500">
+          <span class="text-[#419bfb]">> </span>Example: "New York" instead of "NYC"
         </div>
       </div>
       
       <!-- ERROR STATE: API or network errors -->
       <div v-else-if="searchStatus === 'error'" class="text-red-400 text-sm">
-        <span class="text-[#419bfb]">> </span>VERIFICATION ERROR - PLEASE TRY AGAIN
+        <span class="text-[#419bfb]">> </span>INPUT VALIDATION ERROR
         <div class="mt-2 text-xs text-gray-500">
-          <span class="text-[#419bfb]">> </span>{{ searchError || 'Network or API failure' }}
+          <span class="text-[#419bfb]">> </span>{{ searchError || 'Invalid search pattern detected' }}
+        </div>
+        <div class="mt-1 text-xs text-gray-500">
+          <span class="text-[#419bfb]">> </span>Please enter a valid city or country name
         </div>
       </div>
 
@@ -103,6 +120,7 @@
 import { ref, computed, nextTick } from 'vue'
 import { useSearch } from '../composables/useSearch'
 import type { UnifiedSuggestion, CitySelectedEvent } from '../types'
+import Icon from './Icon.vue'
 
 // EMITS
 const emit = defineEmits<{
@@ -139,15 +157,15 @@ const statusBarText = computed(() => {
     case 'idle':
       return '> STATUS: TERMINAL READY // AWAITING INPUT'
     case 'fetching':
-      return '> STATUS: SCANNING DATABASES // VERIFYING WEATHER DATA'
+      return '> STATUS: ANALYZING & VALIDATING // ACCURACY MODE ENABLED'
     case 'success':
       return suggestions.value.length > 0 
-        ? `> STATUS: FOUND ${suggestions.value.length} VALIDATED RESULTS | [↑/↓] NAVIGATE [ENTER] SELECT`
-        : '> STATUS: SCAN COMPLETE // NO VERIFIED LOCATIONS'
+        ? `> STATUS: ${suggestions.value.length} VALIDATED RESULTS | [↑/↓] NAVIGATE [ENTER] SELECT`
+        : '> STATUS: ANALYSIS COMPLETE // NO VALID LOCATIONS FOUND'
     case 'no_results':
-      return '> STATUS: SEARCH COMPLETE // NO RESULTS FOUND'
+      return '> STATUS: SEARCH COMPLETE // NO WEATHER DATA AVAILABLE'
     case 'error':
-      return `> STATUS: SYSTEM ERROR // ${searchError.value || 'RETRY RECOMMENDED'}`
+      return `> STATUS: INPUT ERROR // ${searchError.value || 'PLEASE RETRY'}`
     default:
       return '> STATUS: TERMINAL READY'
   }
@@ -169,20 +187,79 @@ const handleSearchInput = () => {
   searchTimeout = setTimeout(() => {
     const query = searchQuery.value.trim()
     
-    // Check for invalid data starting with 'A'
-    if (query.length >= 2 && query.toLowerCase().startsWith('a')) {
-      // Show error for random data starting with 'A'
-      addTerminalOutput(`❌ ERROR: Invalid search term "${query}"`)
+    // Handle empty query
+    if (query.length === 0) {
       clearSearch()
       return
     }
     
-    if (query.length >= 2) {
+    // Enhanced validation and gibberish detection
+    if (query.length >= 1) {
+      // Comprehensive gibberish detection patterns
+      const gibberishPatterns = [
+        /^[aeiou]{3,}$/i,           // All vowels: "aaa", "eee", "iii"
+        /^[bcdfg-np-tv-z]{4,}$/i,  // All consonants: "bbbbb", "zzzzz"
+        /(.)\1{2,}/i,              // Repeated chars: "aaa", "111", "!!!"
+        /^[0-9]+$/,                // Pure numbers: "12345", "999"
+        /^[!@#$%^&*()_+=\[\]{}|;:,.<>?/\\~`]+$/, // Pure symbols
+        /^([a-z])\1+$/i,           // Single repeated letter: "aaaa", "bbbb"
+        /^(qwe|asd|zxc|qaz|wsx|qwer|asdf|zxcv)/i, // Keyboard patterns
+        /^(test|asdf|hjkl|poiu|mnbv|tyui)/i, // Common test strings
+        /^[^a-zA-Z\s\-']{2,}$/,    // Non-letter strings (excluding valid chars)
+        /^\s+$/,                   // Only whitespace
+        /^(.)\1(.)\2+$/i,          // Alternating patterns: "abab", "1212"
+        /^[qwertyuiop]+$/i,        // Top keyboard row
+        /^[asdfghjkl]+$/i,         // Middle keyboard row  
+        /^[zxcvbnm]+$/i,           // Bottom keyboard row
+        /^[aeiou]+[bcdfg-np-tv-z]+$/i, // Vowels then consonants pattern
+        /^[bcdfg-np-tv-z]+[aeiou]+$/i, // Consonants then vowels pattern
+        /^.{1}$/,                  // Single character (too short)
+        /^[aeiouAEIOU]{2,}$/,      // Multiple vowels only
+        /^[bcdfg-np-tv-zBCDFG-NP-TV-Z]{3,}$/  // Multiple consonants only
+      ]
+      
+      const isGibberish = gibberishPatterns.some(pattern => pattern.test(query))
+      
+      // Additional realistic word checks
+      const hasVowel = /[aeiouAEIOU]/.test(query)
+      const hasConsonant = /[bcdfg-np-tv-zBCDFG-NP-TV-Z]/.test(query)
+      const isReasonableLength = query.length >= 2 && query.length <= 50
+      const hasValidChars = /^[a-zA-Z\s\-']+$/.test(query)
+      
+      // Check for unrealistic patterns
+      const isUnrealistic = (
+        !hasValidChars ||
+        !isReasonableLength ||
+        (query.length > 2 && !hasVowel) ||
+        (query.length > 2 && !hasConsonant) ||
+        isGibberish
+      )
+      
+      if (isUnrealistic) {
+        // COMPLETELY CLEAR everything for gibberish input
+        suggestions.value = []
+        searchStatus.value = 'error'
+        searchError.value = 'Invalid search pattern'
+        
+        addTerminalOutput(`❌ INVALID INPUT: "${query}"`)
+        addTerminalOutput(`🤖 SYSTEM: Please enter a real city or country name`)
+        
+        // Do NOT proceed with any search
+        return
+      }
+      
+      // Additional length validation for short queries
+      if (query.length < 2) {
+        suggestions.value = []
+        searchStatus.value = 'idle'
+        searchError.value = null
+        return
+      }
+      
+      // Only proceed with search if input passes ALL validation
       performSearch(query)
-    } else if (query.length === 0) {
-      clearSearch()
     }
-  }, 300)
+  }, 200) // Reduced from 300ms to 200ms for faster response
 }
 
 // KEYBOARD NAVIGATION WITH AUTO-SCROLL

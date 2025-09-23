@@ -30,6 +30,9 @@ export interface UnifiedSuggestion {
   lat?: number
   lon?: number
   capital?: string // For country suggestions - used for validation
+  // UI-only, background pre-validation state (optional)
+  validated?: boolean
+  validating?: boolean
 }
 
 // Search State Types

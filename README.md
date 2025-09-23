@@ -1,15 +1,16 @@
 # Weather Terminal v2.1
 
-A retro-futuristic weather application inspired by classic VCR and Teletext "blue screen" interfaces from the 1980s and 90s.
+A retro-futuristic weather application inspired by classic VCR/Teletext "blue screen" terminals — compact, no-scroll, and fast.
 
 ## ✨ Features
 
-* **Intelligent, Persistent Search:** A robust, four-stage sequential search engine that finds cities and countries, complete with an auto-retrying mechanism and "exact match" fallbacks.
-* **100% Validated Suggestions:** Every search suggestion is pre-validated against the OpenWeatherMap API to guarantee it has available weather data, eliminating all "dead-end" results.
-* **"Select & Save" Favorites:** A user-friendly favorites system that automatically saves selected locations to the browser's `localStorage` for quick access.
-* **Authentic VCR Aesthetic:** A meticulously crafted design featuring the `VT323` font, a classic blue color palette, and a borderless, block-based layout.
-* **Immersive UX:** Includes a one-time animated "System Boot" screen, a thematic "VCR Tracking" loading animation, and a subtle CRT screen effect for full immersion.
-* **Pixel Art Icons:** Uses the `pixelarticons` library for a cohesive, low-resolution visual identity.
+* **Cancellable, Cached Search:** Four-stage search (prefix city → prefix country → exact city → exact country) with latest-only cancellation, retry/backoff, and API response caching.
+* **Weather-Validated Suggestions:** Each suggestion gets prechecked against OpenWeather data; badges show [--]/[CHK]/[OK] as validation progresses.
+* **Terminal UI (No Scroll):** A fixed-height terminal pane with persistent output, retro loader, and a compact, edge-hugging grid. Page avoids vertical scroll by design.
+* **Readable Retro Typography:** VT323 terminal styling for the command/terminal areas; clear monospace stacks elsewhere where needed.
+* **Unit Toggle Without Refetch:** Client-side conversion for temperatures and wind speeds keeps switching instant and offline from API.
+* **Celestial + Atmospheric Panels:** Sunrise/sunset, moon phase, humidity, pressure, wind; matching terminal styling.
+* **Forecast with Dates:** Five-day forecast includes a compact date next to each weekday and a retro precipitation bar.
 
 ## 🛠️ Tech Stack
 
@@ -43,17 +44,15 @@ A retro-futuristic weather application inspired by classic VCR and Teletext "blu
 
 ## 📱 Live Demo
 
-🌐 **Experience the Weather Terminal v2.1 live:** [https://auzanps.github.io/vue-weather-project/](https://auzanps.github.io/vue-weather-project/)
-
-*Note: The live demo will be available once GitHub Pages deployment completes (usually 2-3 minutes after pushing to main branch).*
+If deploying to GitHub Pages, set `base` in `vite.config.js` to your repo name and publish the `dist` folder. A demo link can go here.
 
 ## 🎮 Usage
 
-1. **Search for Locations:** Type in the search box to find cities or countries
-2. **Smart Validation:** All suggestions are pre-validated for weather data availability
-3. **Select & View:** Click any suggestion to view detailed weather information
-4. **Unit Toggle:** Switch between Celsius and Fahrenheit with the toggle button
-5. **Responsive Design:** Works seamlessly on desktop and mobile devices
+1. Type at least 2 characters to search cities or countries
+2. Use ↑/↓ to navigate results, Enter to select
+3. Watch validation badges: [--] queued, [CHK] validating, [OK] weather-verified
+4. Toggle °C/°F under the temperature (instant, no refetch)
+5. Forecast shows weekday with a date and a precipitation bar
 
 ## 🎨 Design Philosophy
 
@@ -103,7 +102,7 @@ VITE_RAPIDAPI_KEY=your_rapidapi_key_here
 ### Core Components
 
 - **`App.vue`** - Main application container and state management
-- **`CitySearch.vue`** - Four-stage search interface with terminal styling
+- **`CitySearch.vue`** - Four-stage, cancellable search with persistent terminal output and validation badges
 - **`WeatherDisplay.vue`** - Primary weather information display
 - **`WeatherDetails.vue`** - Atmospheric data specifications
 - **`ForecastDisplay.vue`** - 5-day weather forecast
@@ -111,24 +110,15 @@ VITE_RAPIDAPI_KEY=your_rapidapi_key_here
 
 ### Advanced Features
 
-- **Four-Stage Search System:** Prefix cities → Prefix countries → Exact cities → Exact countries
-- **API Validation:** Every suggestion verified against OpenWeatherMap before display
-- **Coordinate-Based Weather:** Uses lat/lon coordinates for maximum accuracy
-- **Smooth Unit Conversion:** Client-side temperature/wind speed unit switching
-- **Defensive Programming:** Comprehensive null checks and error handling
+- **Four-Stage, Cancellable Search:** Prefix cities → Prefix countries → Exact cities → Exact countries; latest-only, cached, with retry/backoff
+- **API Validation:** Each suggestion verified against OpenWeatherMap; progressive badges in UI
+- **Coordinate-Based Weather:** Uses GeoDB lat/lon for accuracy when available
+- **Smooth Unit Conversion:** Client-side conversion for temps and wind
+- **Compact No-Scroll Layout:** Tight paddings, fixed terminal pane, edge-hugging grid
 
 ## 🌐 Deployment
 
-This project is configured for automatic deployment to GitHub Pages using GitHub Actions.
-
-### Deployment Steps
-
-1. Fork or clone this repository
-2. Update the `base` property in `vite.config.js` to match your repository name
-3. Set up your API keys in GitHub Secrets:
-   - `VITE_OPENWEATHER_API_KEY`
-   - `VITE_RAPIDAPI_KEY`
-4. Push to the `main` branch to trigger automatic deployment
+You can deploy to any static host (Vercel/Netlify/GitHub Pages). For GitHub Pages, set `base` in `vite.config.js`, run `npm run build`, then publish `dist`.
 
 ## 🤝 Contributing
 

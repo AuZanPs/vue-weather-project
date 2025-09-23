@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { formatTimezoneOffset } from '../utils/formatters'
+import Icon from './Icon.vue'
 
 interface CelestialData {
   sunrise: number
@@ -14,11 +15,15 @@ const props = defineProps<{
 }>()
 
 const formatTime = (timestamp: number): string => {
-  const date = new Date(timestamp * 1000)
-  return date.toLocaleTimeString('en-US', { 
-    hour: '2-digit', 
+  // OpenWeather sunrise/sunset are in UTC seconds.
+  // Apply the provided timezone offset (in seconds), then render in UTC to avoid
+  // the browser re-applying the local timezone.
+  const shifted = new Date((timestamp + props.celestial.timezone) * 1000)
+  return shifted.toLocaleTimeString('en-US', {
+    hour: '2-digit',
     minute: '2-digit',
-    hour12: true 
+    hour12: true,
+    timeZone: 'UTC'
   })
 }
 
@@ -46,17 +51,26 @@ const getMoonPhaseDisplay = (phase: number): { icon: string, description: string
     </div>
     <div class="space-y-1 font-mono text-sm">
       <div class="flex">
-        <span class="text-terminal-white">SUNRISE</span>
+        <span class="text-terminal-white flex items-center gap-2">
+          <Icon name="Sunrise" class="text-terminal-blue" :size="16" :stroke-width="2" aria-hidden="true" />
+          SUNRISE
+        </span>
         <span class="flex-1 text-terminal-blue">{{ '.'.repeat(15 - 'SUNRISE'.length) }}</span>
         <span class="text-terminal-white">{{ formatTime(celestial.sunrise) }} ({{ timezoneAbbreviation }})</span>
       </div>
       <div class="flex">
-        <span class="text-terminal-white">SUNSET</span>
+        <span class="text-terminal-white flex items-center gap-2">
+          <Icon name="Sunset" class="text-terminal-blue" :size="16" :stroke-width="2" aria-hidden="true" />
+          SUNSET
+        </span>
         <span class="flex-1 text-terminal-blue">{{ '.'.repeat(15 - 'SUNSET'.length) }}</span>
         <span class="text-terminal-white">{{ formatTime(celestial.sunset) }} ({{ timezoneAbbreviation }})</span>
       </div>
       <div class="flex">
-        <span class="text-terminal-white">MOON PHASE</span>
+        <span class="text-terminal-white flex items-center gap-2">
+          <Icon name="Moon" class="text-terminal-blue" :size="16" :stroke-width="2" aria-hidden="true" />
+          MOON PHASE
+        </span>
         <span class="flex-1 text-terminal-blue">{{ '.'.repeat(15 - 'MOON PHASE'.length) }}</span>
         <span class="text-terminal-white">{{ getMoonPhaseDisplay(celestial.moonPhase).icon }} {{ getMoonPhaseDisplay(celestial.moonPhase).description }}</span>
       </div>

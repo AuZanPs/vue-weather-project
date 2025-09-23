@@ -3,9 +3,9 @@
 ## 📋 Project Overview
 
 **Application Name:** Vue Weather App  
-**Version:** 0.0.0  
+**Version:** 2.1.0  
 **Type:** Single Page Application (SPA)  
-**Theme:** Chromepunk Terminal Interface  
+**Theme:** Retro Terminal (VCR/Teletext-inspired)  
 **Purpose:** Real-time weather information display with retro-futuristic terminal aesthetics
 
 ---
@@ -21,10 +21,9 @@
 
 ### Design System
 - **UI Framework:** Tailwind CSS 3.4.17
-- **Typography:** IBM Plex Mono (monospace font)
-- **Theme:** Chromepunk Terminal (1960s Cold War aesthetic)
-- **Animation Library:** AOS 2.3.4 (Animate On Scroll)
-- **Icons:** Oh Vue Icons 1.0.0-rc3
+- **Typography:** VT323 for terminal/search areas; readable monospace stack elsewhere
+- **Theme:** VCR/Teletext retro terminal
+- **Icons:** lucide-vue-next
 
 ---
 
@@ -44,10 +43,9 @@
 - **Character Set:** Terminal-style display
 
 ### Visual Effects
-- **CRT Scanlines:** Subtle overlay for authentic terminal feel
-- **Glitch Effects:** Brief visual distortions on data updates
-- **Typewriter Animation:** Character-by-character text reveals
-- **Glow Effects:** Text-shadow for terminal luminescence
+- **Tracking Lines Loading:** Retro VCR-style animated overlay
+- **Cursor Blink:** Terminal caret animation
+- **Glow Effects:** Subtle text glows for terminal feel
 
 ---
 
@@ -112,9 +110,11 @@ interface CurrentWeather {
 
 interface ForecastItem {
   day: string
+  date?: string
   iconCode: number
   high: number
   low: number
+  precipitation: number
 }
 ```
 
@@ -133,9 +133,10 @@ interface ForecastItem {
 ### CitySearch.vue
 - **Purpose:** City search input interface
 - **Features:**
-  - Terminal command-line styling
-  - Input validation
-  - Search event emission
+  - Terminal command-line styling (persistent output pane)
+  - Latest-only search cancellation with debounce and retry/backoff
+  - Progressive weather validation badges ([--]/[CHK]/[OK])
+  - Strong input validation and gibberish detection
 - **Styling:** Terminal prompt with monospace font
 
 ### WeatherDisplay.vue
@@ -159,7 +160,8 @@ interface ForecastItem {
 - **Features:**
   - Daily high/low temperatures
   - Weather condition icons
-  - Horizontal scrollable layout
+  - Date displayed alongside weekday
+  - Retro precipitation bar visualizing POP
 - **Styling:** Teletype transmission log
 
 ### WeatherIcon.vue
@@ -259,11 +261,9 @@ weather-app/
 - [x] **Loading States:** User feedback during API calls
 
 ### UI/UX Features
-- [x] **Terminal Aesthetics:** Chromepunk design system
-- [x] **Smooth Animations:** Entrance and transition effects
-- [x] **CRT Effects:** Scanlines and glow effects
-- [x] **Typewriter Text:** Character-by-character reveals
-- [x] **Glitch Effects:** Brief visual distortions
+- [x] **Terminal Aesthetics:** VCR/Teletext retro theme (VT323 in terminal areas)
+- [x] **Retro Loading/Glow:** Tracking lines overlay and terminal glow
+- [x] **Compact Layout:** No vertical page scrolling; internal scroll within terminal pane
 
 ### Technical Features
 - [x] **TypeScript:** Full type safety
@@ -327,8 +327,8 @@ weather-app/
 - [ ] **Geolocation API:** Automatic location detection
 - [ ] **Weather Alerts:** Severe weather notifications
 - [ ] **Historical Data:** Past weather information
-- [ ] **Multiple Units:** Fahrenheit/Celsius toggle
 - [ ] **Offline Mode:** Service worker implementation
+- [ ] **URL Sharing:** Encode selected city in the URL for sharing
 
 ---
 
@@ -348,5 +348,5 @@ weather-app/
 
 ---
 
-*Last Updated: September 22, 2025*  
+*Last Updated: September 23, 2025*  
 *Document Version: 1.0*

@@ -23,6 +23,7 @@ export interface CurrentWeather {
 
 export interface ForecastItem {
   day: string
+  date?: string
   iconCode: number
   high: number // Raw temperature in Celsius
   low: number // Raw temperature in Celsius
@@ -118,7 +119,7 @@ const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY as string
 const BASE_URL = 'https://api.openweathermap.org/data/2.5'
 
 // ARTIFICIAL LOADING DELAY FOR RETRO VCR EXPERIENCE
-const MINIMUM_LOADING_TIME = 1500 // 1.5 seconds minimum loading time
+const MINIMUM_LOADING_TIME = 300 // shorter minimum to keep snappy UX
 
 // Check if API key is loaded
 if (!API_KEY) {
@@ -245,85 +246,68 @@ const getWeather = async (city: string, unit: Unit = 'metric') => {
       return
     }
     
-    // Define the main weather data fetching logic
-    const fetchWeatherData = async () => {
-      // ALWAYS fetch in metric to store raw Celsius values for smooth unit switching
-      const weatherUrl = `${BASE_URL}/weather?q=${city}&appid=${API_KEY}&units=metric`
-      const forecastUrl = `${BASE_URL}/forecast?q=${city}&appid=${API_KEY}&units=metric`
-      
-      // Enhanced error handling for OpenWeatherMap API
-      const weatherResponse = await axios.get<WeatherApiResponse>(weatherUrl)
-      
-      // Check for 404 specifically - location found in search but no weather data
-      if (weatherResponse.status === 404) {
-        throw new Error('Location found, but no weather data available.')
-      }
-      
-      const weatherData = weatherResponse.data
-      
-      // Get coordinates for additional data
-      const lat = weatherData.coord.lat
-      const lon = weatherData.coord.lon
-      
-      // Store RAW temperature data in Celsius for smooth unit switching
-      currentWeather.value = {
-        city: weatherData.name,
-        temperature: weatherData.main.temp, // Raw Celsius
-        condition: weatherData.weather[0].main,
-        iconCode: weatherData.weather[0].id,
-        humidity: weatherData.main.humidity,
-        windSpeed: weatherData.wind.speed, // Raw m/s
-        pressure: weatherData.main.pressure
-      }
-      
-      // Use real celestial data from the API
-      const realCelestialData = {
-        sunrise: weatherData.sys.sunrise,
-        sunset: weatherData.sys.sunset,
-        moonPhase: getCurrentMoonPhase(), // Calculate current moon phase
-        timezone: weatherData.timezone // Timezone offset in seconds from UTC
-      }
-      
-      // Use real system status data from the API - store raw Celsius values
-      const realSystemStatus = {
-        feelsLike: weatherData.main.feels_like, // Raw Celsius
-        uvIndex: await getUVIndex(weatherData.coord.lat, weatherData.coord.lon),
-        visibility: weatherData.visibility || 10000
-      }
-      
-      // Set real celestial data
-      celestialData.value = realCelestialData
-      
-      // Set real system status data  
-      systemStatus.value = realSystemStatus
-      
-      // Fetch forecast with enhanced error handling
-      const forecastResponse = await axios.get<{list: ForecastApiItem[]}>(forecastUrl)
-      
-      if (forecastResponse.status === 404) {
-        throw new Error('Weather data partially available - forecast unavailable.')
-      }
-      
-      const forecastData = forecastResponse.data
-      const dailyForecasts = forecastData.list.filter((_: ForecastApiItem, index: number) => index % 8 === 4).slice(0, 5)
-      
-      forecast.value = dailyForecasts.map((item: ForecastApiItem) => ({
-        day: new Date(item.dt * 1000).toLocaleDateString('en', { weekday: 'short' }).toUpperCase(),
-        iconCode: item.weather[0].id,
-        high: item.main.temp_max, // Raw Celsius
-        low: item.main.temp_min, // Raw Celsius
-        precipitation: Math.round((item.pop || 0) * 100)
-      }))
+    // Start both calls concurrently and resolve weather first for responsiveness
+    const startedAt = performance.now()
+    const weatherUrl = `${BASE_URL}/weather?q=${city}&appid=${API_KEY}&units=metric`
+    const forecastUrl = `${BASE_URL}/forecast?q=${city}&appid=${API_KEY}&units=metric`
+
+    const weatherPromise = axios.get<WeatherApiResponse>(weatherUrl, { timeout: 15000 })
+    const forecastPromise = axios.get<{list: ForecastApiItem[]}>(forecastUrl, { timeout: 20000 })
+
+    const weatherResponse = await weatherPromise
+    if (weatherResponse.status === 404) {
+      throw new Error('Location found, but no weather data available.')
     }
-    
-    // ARTIFICIAL LOADING DELAY - Wait for both API call AND minimum loading time
-    await Promise.all([
-      // Promise 1: The actual API call
-      fetchWeatherData(),
-      
-      // Promise 2: The artificial delay timer for retro VCR experience
-      delay(MINIMUM_LOADING_TIME)
-    ])
+
+    const weatherData = weatherResponse.data
+    // Store RAW temperature data in Celsius for smooth unit switching
+    currentWeather.value = {
+      city: weatherData.name,
+      temperature: weatherData.main.temp, // Raw Celsius
+      condition: weatherData.weather[0].main,
+      iconCode: weatherData.weather[0].id,
+      humidity: weatherData.main.humidity,
+      windSpeed: weatherData.wind.speed, // Raw m/s
+      pressure: weatherData.main.pressure
+    }
+
+    // Use real celestial data from the API
+    celestialData.value = {
+      sunrise: weatherData.sys.sunrise,
+      sunset: weatherData.sys.sunset,
+      moonPhase: getCurrentMoonPhase(), // Calculate current moon phase
+      timezone: weatherData.timezone // Timezone offset in seconds from UTC
+    }
+
+    // Use real system status data from the API - store raw Celsius values
+    systemStatus.value = {
+      feelsLike: weatherData.main.feels_like, // Raw Celsius
+      uvIndex: await getUVIndex(weatherData.coord.lat, weatherData.coord.lon),
+      visibility: weatherData.visibility || 10000
+    }
+
+    // Ensure a minimal overlay time but don't block longer than needed
+    const elapsed = performance.now() - startedAt
+    if (elapsed < MINIMUM_LOADING_TIME) {
+      await delay(MINIMUM_LOADING_TIME - elapsed)
+    }
+
+    // Let forecast resolve in the background; don't block UI
+    forecastPromise
+      .then(({ data }) => {
+        const dailyForecasts = data.list.filter((_: ForecastApiItem, index: number) => index % 8 === 4).slice(0, 5)
+        forecast.value = dailyForecasts.map((item: ForecastApiItem) => ({
+          day: new Date(item.dt * 1000).toLocaleDateString('en', { weekday: 'short' }).toUpperCase(),
+          date: new Date(item.dt * 1000).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' }),
+          iconCode: item.weather[0].id,
+          high: item.main.temp_max, // Raw Celsius
+          low: item.main.temp_min, // Raw Celsius
+          precipitation: Math.round((item.pop || 0) * 100)
+        }))
+      })
+      .catch((e) => {
+        console.warn('Forecast unavailable or delayed', e)
+      })
     
   } catch (err: unknown) {
     const errorObj = err as { response?: { status?: number }; code?: string; message?: string }
@@ -369,83 +353,62 @@ const getWeatherByCoordinates = async (lat: number, lon: number, displayName: st
       return
     }
     
-    // Define the coordinate-based weather data fetching logic
-    const fetchWeatherDataByCoordinates = async () => {
-      // ALWAYS fetch in metric to store raw Celsius values for smooth unit switching
-      // Use coordinates as the universal translator - no more naming conflicts!
-      const weatherUrl = `${BASE_URL}/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`
-      const forecastUrl = `${BASE_URL}/forecast?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`
-      
-      // Enhanced error handling for OpenWeatherMap API
-      const weatherResponse = await axios.get<WeatherApiResponse>(weatherUrl)
-      
-      // Check for 404 specifically - should never happen with valid coordinates
-      if (weatherResponse.status === 404) {
-        throw new Error('Coordinates valid but no weather data available.')
-      }
-      
-      const weatherData = weatherResponse.data
-      
-      // Store RAW temperature data in Celsius for smooth unit switching
-      // Use the display name from GeoDB for user-friendly city name
-      currentWeather.value = {
-        city: displayName, // Use the user-friendly name from GeoDB
-        temperature: weatherData.main.temp, // Raw Celsius
-        condition: weatherData.weather[0].main,
-        iconCode: weatherData.weather[0].id,
-        humidity: weatherData.main.humidity,
-        windSpeed: weatherData.wind.speed, // Raw m/s
-        pressure: weatherData.main.pressure
-      }
-      
-      // Use real celestial data from the API
-      const realCelestialData = {
-        sunrise: weatherData.sys.sunrise,
-        sunset: weatherData.sys.sunset,
-        moonPhase: getCurrentMoonPhase(), // Calculate current moon phase
-        timezone: weatherData.timezone // Timezone offset in seconds from UTC
-      }
-      
-      // Use real system status data from the API - store raw Celsius values
-      const realSystemStatus = {
-        feelsLike: weatherData.main.feels_like, // Raw Celsius
-        uvIndex: await getUVIndex(lat, lon), // Use the same coordinates
-        visibility: weatherData.visibility || 10000
-      }
-      
-      // Set real celestial data
-      celestialData.value = realCelestialData
-      
-      // Set real system status data  
-      systemStatus.value = realSystemStatus
-      
-      // Fetch forecast with enhanced error handling using same coordinates
-      const forecastResponse = await axios.get<{list: ForecastApiItem[]}>(forecastUrl)
-      
-      if (forecastResponse.status === 404) {
-        throw new Error('Weather data partially available - forecast unavailable.')
-      }
-      
-      const forecastData = forecastResponse.data
-      const dailyForecasts = forecastData.list.filter((_: ForecastApiItem, index: number) => index % 8 === 4).slice(0, 5)
-      
-      forecast.value = dailyForecasts.map((item: ForecastApiItem) => ({
-        day: new Date(item.dt * 1000).toLocaleDateString('en', { weekday: 'short' }).toUpperCase(),
-        iconCode: item.weather[0].id,
-        high: item.main.temp_max, // Raw Celsius
-        low: item.main.temp_min, // Raw Celsius
-        precipitation: Math.round((item.pop || 0) * 100)
-      }))
+    // Coordinate-based fetch with parallelized forecast and minimal overlay
+    const startedAt = performance.now()
+    const weatherUrl = `${BASE_URL}/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`
+    const forecastUrl = `${BASE_URL}/forecast?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`
+
+    const weatherPromise = axios.get<WeatherApiResponse>(weatherUrl, { timeout: 15000 })
+    const forecastPromise = axios.get<{list: ForecastApiItem[]}>(forecastUrl, { timeout: 20000 })
+
+    const weatherResponse = await weatherPromise
+    if (weatherResponse.status === 404) {
+      throw new Error('Coordinates valid but no weather data available.')
     }
-    
-    // ARTIFICIAL LOADING DELAY - Wait for both API call AND minimum loading time
-    await Promise.all([
-      // Promise 1: The actual coordinate-based API call
-      fetchWeatherDataByCoordinates(),
-      
-      // Promise 2: The artificial delay timer for retro VCR experience
-      delay(MINIMUM_LOADING_TIME)
-    ])
+
+    const weatherData = weatherResponse.data
+    currentWeather.value = {
+      city: displayName, // Use the user-friendly name from GeoDB
+      temperature: weatherData.main.temp, // Raw Celsius
+      condition: weatherData.weather[0].main,
+      iconCode: weatherData.weather[0].id,
+      humidity: weatherData.main.humidity,
+      windSpeed: weatherData.wind.speed, // Raw m/s
+      pressure: weatherData.main.pressure
+    }
+    celestialData.value = {
+      sunrise: weatherData.sys.sunrise,
+      sunset: weatherData.sys.sunset,
+      moonPhase: getCurrentMoonPhase(),
+      timezone: weatherData.timezone
+    }
+    systemStatus.value = {
+      feelsLike: weatherData.main.feels_like,
+      uvIndex: await getUVIndex(lat, lon),
+      visibility: weatherData.visibility || 10000
+    }
+
+    const elapsed = performance.now() - startedAt
+    if (elapsed < MINIMUM_LOADING_TIME) {
+      await delay(MINIMUM_LOADING_TIME - elapsed)
+    }
+
+    // Forecast background update
+    forecastPromise
+      .then(({ data }) => {
+        const dailyForecasts = data.list.filter((_: ForecastApiItem, index: number) => index % 8 === 4).slice(0, 5)
+        forecast.value = dailyForecasts.map((item: ForecastApiItem) => ({
+          day: new Date(item.dt * 1000).toLocaleDateString('en', { weekday: 'short' }).toUpperCase(),
+          date: new Date(item.dt * 1000).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' }),
+          iconCode: item.weather[0].id,
+          high: item.main.temp_max, // Raw Celsius
+          low: item.main.temp_min, // Raw Celsius
+          precipitation: Math.round((item.pop || 0) * 100)
+        }))
+      })
+      .catch((e) => {
+        console.warn('Forecast unavailable or delayed', e)
+      })
     
   } catch (err: unknown) {
     const errorObj = err as { response?: { status?: number }; code?: string; message?: string }
@@ -494,17 +457,16 @@ onMounted(() => {
 
 <template>
   <!-- VCR TRACKING LOADING SCREEN -->
-  <div v-if="isAppLoading" class="loading-overlay">
+  <div v-if="isAppLoading" class="loading-overlay" aria-label="loading">
     <div class="loading-content">
-      <span>LOADING...</span>
       <span class="blinking-cursor">█</span>
     </div>
   </div>
 
   <div class="min-h-screen bg-terminal-bg text-terminal-white font-mono">
-    <div class="p-4">
-      <div class="mb-4">
-        <div class="text-xs mb-2 text-terminal-blue">
+  <div class="p-3">
+  <div class="mb-3">
+        <div class="text-xs mb-2 text-terminal-blue" style="font-family: 'VT323', 'IBM Plex Mono', monospace; font-size: 0.95rem;">
           WEATHER TERMINAL v2.1
         </div>
         <CitySearch @citySelected="handleCitySelected" />
@@ -535,38 +497,28 @@ onMounted(() => {
         </div>
       </div>
       
-      <div
-        v-else-if="displayWeather"
-        class="grid grid-cols-1 lg:grid-cols-2 gap-4"
-      >
+  <!-- Main layout: aligned two-column rows (top: city/temp, bottom: details/celestial) -->
+  <div v-else-if="displayWeather" class="mt-3 space-y-3">
+        <!-- Weather header row spans the same full width as panels below for perfect column alignment -->
         <WeatherDisplay 
           :weather="displayWeather" 
           :temp-symbol="tempSymbol" 
           :unit-toggle-text="unitToggleText" 
           @toggle-unit="toggleUnit" 
         />
-        <WeatherDetails :weather="displayWeather" :temp-symbol="tempSymbol" />
+
+        <!-- Side-by-side: Atmospheric Data and Celestial Tracker -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <WeatherDetails :weather="displayWeather" :temp-symbol="tempSymbol" />
+          <div v-if="celestialData">
+            <CelestialTracker :celestial="celestialData" />
+          </div>
+        </div>
       </div>
       
-      <!-- New enhanced panels -->
-      <div
-        v-if="displayWeather && celestialData && !weatherError"
-        class="mt-4"
-      >
-        <CelestialTracker :celestial="celestialData" />
-      </div>
+  <div v-else-if="!weatherError" class="text-terminal-blue text-center py-6" aria-hidden="true"></div>
       
-      <div
-        v-else-if="!weatherError"
-        class="text-terminal-blue text-center py-8"
-      >
-        INITIALIZING...
-      </div>
-      
-      <div
-        v-if="displayWeather && displayForecast.length && !weatherError"
-        class="mt-4"
-      >
+      <div v-if="displayWeather && displayForecast.length && !weatherError" class="mt-3">
         <ForecastDisplay :forecast="displayForecast" :temp-symbol="tempSymbol" />
       </div>
     </div>
@@ -653,7 +605,7 @@ onMounted(() => {
   max-width: 500px;
   width: 100%;
   text-align: center;
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'VT323', 'IBM Plex Mono', monospace;
   box-shadow: 0 0 10px rgba(65, 155, 251, 0.3);
 }
 

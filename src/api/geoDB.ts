@@ -29,7 +29,8 @@ export const fetchCitySuggestions = async (query: string): Promise<CitySuggestio
   if (query.length < 2) return []
 
   try {
-    const url = `${BASE_URL}/cities?minPopulation=100000&namePrefix=${encodeURIComponent(query)}&limit=8`
+    // Use a simpler approach - trust the API more and filter less
+    const url = `${BASE_URL}/cities?minPopulation=50000&namePrefix=${encodeURIComponent(query)}&limit=10`
     
     const response = await fetch(url, {
       method: 'GET',
@@ -42,6 +43,7 @@ export const fetchCitySuggestions = async (query: string): Promise<CitySuggestio
 
     const data = await response.json()
     return data.data || []
+    
   } catch (error) {
     throw error
   }
@@ -68,6 +70,7 @@ export const fetchCountrySuggestions = async (query: string): Promise<CountrySug
 
     const data = await response.json()
     return data.data || []
+    
   } catch (error) {
     throw error
   }
@@ -93,7 +96,18 @@ export const fetchExactCityMatch = async (query: string): Promise<CitySuggestion
     }
 
     const data = await response.json()
-    return data.data || []
+    const rawResults = data.data || []
+    
+    // CLIENT-SIDE FILTERING: Only return cities that match the query exactly or start with it
+    const filteredResults = rawResults.filter((city: CitySuggestion) => {
+      if (!city.name) return false
+      const cityName = city.name.toLowerCase()
+      const queryLower = query.toLowerCase()
+      // Allow exact match or starts with query
+      return cityName === queryLower || cityName.startsWith(queryLower)
+    })
+    
+    return filteredResults.slice(0, 5)
   } catch (error) {
     throw error
   }
@@ -119,7 +133,18 @@ export const fetchExactCountryMatch = async (query: string): Promise<CountrySugg
     }
 
     const data = await response.json()
-    return data.data || []
+    const rawResults = data.data || []
+    
+    // CLIENT-SIDE FILTERING: Only return countries that match the query exactly or start with it
+    const filteredResults = rawResults.filter((country: CountrySuggestion) => {
+      if (!country.name) return false
+      const countryName = country.name.toLowerCase()
+      const queryLower = query.toLowerCase()
+      // Allow exact match or starts with query
+      return countryName === queryLower || countryName.startsWith(queryLower)
+    })
+    
+    return filteredResults.slice(0, 3)
   } catch (error) {
     throw error
   }
