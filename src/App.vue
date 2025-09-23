@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /// <reference types="vite/client" />
 
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import axios from 'axios'
 import CitySearch from './components/CitySearch.vue'
 import WeatherDisplay from './components/WeatherDisplay.vue'
@@ -498,10 +498,15 @@ const handleCitySelected = (cityData: { name: string; displayName: string; type:
 }
 
 // Local time label computed from timezone offset
+// Live-updating local time: tick every 30s to keep minutes fresh without heavy intervals
+const nowTick = ref(Date.now())
+let clockInterval: number | undefined
+
 const localTimeLabel = computed(() => {
   if (!celestialData.value) return ''
+  // depend on nowTick so computed re-evaluates periodically
+  void nowTick.value
   const offset = celestialData.value.timezone
-  // Compute local time from offset
   const now = new Date()
   const utcMs = now.getTime() + now.getTimezoneOffset() * 60000
   const localMs = utcMs + offset * 1000
@@ -522,6 +527,18 @@ onMounted(() => {
 
   // Always fetch in metric to store raw data
   getWeather('Jakarta', 'metric')
+
+  // Start lightweight clock tick
+  clockInterval = window.setInterval(() => {
+    nowTick.value = Date.now()
+  }, 30000)
+})
+
+onBeforeUnmount(() => {
+  if (clockInterval) {
+    window.clearInterval(clockInterval)
+    clockInterval = undefined
+  }
 })
 </script>
 
