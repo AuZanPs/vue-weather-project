@@ -13,6 +13,11 @@ A retro-futuristic weather application inspired by classic VCR/Teletext "blue sc
 * **Unit Toggle Without Refetch:** Client-side conversion for temperatures and wind speeds keeps switching instant and offline from API.
 * **Celestial + Atmospheric Panels:** Sunrise/sunset, moon phase, humidity, pressure, wind; matching terminal styling.
 * **Forecast with Dates:** Five-day forecast includes a compact date next to each weekday and a retro precipitation bar.
+* **Rate-Limit Aware Search:** Built-in request spacing, cooldowns, and Retry-After handling for GeoDB to minimize 429s; visible terminal hints during brief throttles.
+* **Live Local Time + Feels Like:** Local time updates every second using timezone offsets; “FEELS LIKE” temperature displayed.
+* **Unit Preference Persistence:** °C/°F selection is saved to localStorage and restored on load.
+* **Accessibility:** Search status and terminal output use aria-live for screen readers; plain-text, emoji-free logs.
+* **In-Memory Weather Cache:** Last selected city’s weather hydrates instantly while fresh data refreshes silently.
 
 ## Tech Stack
 
@@ -46,7 +51,9 @@ A retro-futuristic weather application inspired by classic VCR/Teletext "blue sc
 
 ## Live Demo
 
-If deploying to GitHub Pages, set `base` in `vite.config.js` to your repo name and publish the `dist` folder. A demo link can go here.
+- Live: https://auzanps.github.io/vue-weather-project/
+- Deployment: `vite.config.js` already sets `base` to `/vue-weather-project/` for GitHub Pages.
+- To publish elsewhere (Vercel/Netlify), no base change is needed.
 
 ## Usage
 
@@ -55,6 +62,15 @@ If deploying to GitHub Pages, set `base` in `vite.config.js` to your repo name a
 3. Watch validation badges: [--] queued, [CHK] validating, [OK] weather-verified
 4. Toggle °C/°F under the temperature (instant, no refetch)
 5. Forecast shows weekday with a date and a precipitation bar
+
+### Customize the page title
+
+Edit the `<title>` tag in `index.html`:
+
+```
+<title>Your Custom Title</title>
+```
+You can also update `document.title` dynamically in `App.vue` if you want the tab to reflect the selected city.
 
 ## Design Philosophy
 

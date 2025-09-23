@@ -1,352 +1,171 @@
-# Weather Application - Technical Specification
+# Weather Terminal v2.1 — Technical Specification
 
 ## Project Overview
 
-**Application Name:** Vue Weather App  
-**Version:** 2.1.0  
-**Type:** Single Page Application (SPA)  
-**Theme:** Retro Terminal (VCR/Teletext-inspired)  
-**Purpose:** Real-time weather information display with retro-futuristic terminal aesthetics
+- Application Name: Weather Terminal
+- Version: 2.1.0
+- Type: Single Page Application (SPA)
+- Theme: Retro Terminal (VCR/Teletext-inspired)
+- Purpose: Real-time weather with compact, no-scroll UI and robust search/validation
 
 ---
 
 ## Architecture Overview
 
-### Frontend Architecture
-- **Framework:** Vue.js 3.5.18 with Composition API
-- **Language:** TypeScript (strict mode)
-- **Build Tool:** Vite 7.0.6
-- **Bundler:** ESM (ES Modules)
-- **State Management:** Vue 3 Reactivity API (ref, reactive)
+### Frontend
+- Framework: Vue.js 3.5.18 (Composition API)
+- Language: TypeScript (in SFCs via `<script setup lang="ts">`)
+- Build Tool: Vite 7.x
+- Modules: ESM
+- State: Local component state (ref/computed) + in-memory caches
 
 ### Design System
-- **UI Framework:** Tailwind CSS 3.4.17
-- **Typography:** VT323 for terminal/search areas; readable monospace stack elsewhere
-- **Theme:** VCR/Teletext retro terminal
-- **Icons:** lucide-vue-next
-
----
-
-## Design Specifications
-
-### Color Palette
-```javascript
-'terminal-bg': '#011173',     // Deep blue background
-'terminal-red': '#dd0101',    // Alert/error red
-'terminal-white': '#ffffff',  // Primary text
-'terminal-blue': '#419bfb',   // Accent blue
-```
-
-### Typography
-- **Primary Font:** IBM Plex Mono (monospace)
-- **Fallback:** System monospace fonts
-- **Character Set:** Terminal-style display
-
-### Visual Effects
-- **Tracking Lines Loading:** Retro VCR-style animated overlay
-- **Cursor Blink:** Terminal caret animation
-- **Glow Effects:** Subtle text glows for terminal feel
-
----
-
-## Technical Stack
-
-### Core Dependencies
-```json
-{
-  "vue": "^3.5.18",           // Frontend framework
-  "axios": "^1.12.2",         // HTTP client
-  "tailwindcss": "^3.4.17",   // CSS framework
-  "typescript": "latest"      // Type safety
-}
-```
-
-### Development Tools
-```json
-{
-  "vite": "^7.0.6",                    // Build tool
-  "eslint": "^9.36.0",                 // Code linting
-  "@typescript-eslint/*": "^8.44.0",   // TS linting
-  "eslint-plugin-vue": "^10.4.0",      // Vue linting
-  "postcss": "^8.5.6",                 // CSS processing
-  "autoprefixer": "^10.4.21"           // CSS vendor prefixes
-}
-```
-
-### Runtime Requirements
-- **Node.js:** ^20.19.0 || >=22.12.0
-- **Package Manager:** npm/yarn/pnpm
-- **Browser Support:** Modern browsers with ES2020+ support
+- CSS: Tailwind CSS 3.4.x via PostCSS
+- Fonts: VT323 (terminal/search); IBM Plex Mono base
+- Icons: lucide-vue-next (via `Icon.vue` and `WeatherIcon.vue`)
+- Theme Colors:
+  - terminal-bg: #011173
+  - terminal-blue: #419bfb
+  - terminal-white: #ffffff
+  - terminal-red: #dd0101
 
 ---
 
 ## API Integration
 
-### Weather Data Provider
-**Service:** OpenWeatherMap API  
-**Base URL:** `https://api.openweathermap.org/data/2.5`  
-**Authentication:** API Key (environment variable)
+### Providers
+- OpenWeatherMap (weather/forecast)
+- GeoDB Cities via RapidAPI (city/country suggestions)
 
-### Endpoints Used
-1. **Current Weather**
-   - `GET /weather?q={city}&appid={key}&units=metric`
-   - Returns: Current conditions, temperature, humidity, pressure, wind
+### OpenWeather Endpoints
+- Current (name): `/weather?q={city}&appid={key}&units=metric`
+- Forecast (name): `/forecast?q={city}&appid={key}&units=metric`
+- Current (coords): `/weather?lat={lat}&lon={lon}&appid={key}&units=metric`
+- Forecast (coords): `/forecast?lat={lat}&lon={lon}&appid={key}&units=metric`
 
-2. **5-Day Forecast**
-   - `GET /forecast?q={city}&appid={key}&units=metric`
-   - Returns: Weather predictions in 3-hour intervals
-
-### Data Models
-```typescript
-interface CurrentWeather {
-  city: string
-  temperature: number
-  condition: string
-  iconCode: number
-  humidity: number
-  windSpeed: number
-  pressure: number
-}
-
-interface ForecastItem {
-  day: string
-  date?: string
-  iconCode: number
-  high: number
-  low: number
-  precipitation: number
-}
-```
-
----
-
-## Component Architecture
-
-### App.vue (Root Component)
-- **Purpose:** Main application container and state management
-- **Responsibilities:**
-  - API calls and data fetching
-  - Error handling and loading states
-  - Child component orchestration
-  - Terminal grid layout
-
-### CitySearch.vue
-- **Purpose:** City search input interface
-- **Features:**
-  - Terminal command-line styling (persistent output pane)
-  - Latest-only search cancellation with debounce and retry/backoff
-  - Progressive weather validation badges ([--]/[CHK]/[OK])
-  - Strong input validation and gibberish detection
-- **Styling:** Terminal prompt with monospace font
-
-### WeatherDisplay.vue
-- **Purpose:** Primary weather information display
-- **Features:**
-  - Current temperature and conditions
-  - City name display
-  - Weather icon integration
-- **Styling:** Government file classification headers
-
-### WeatherDetails.vue
-- **Purpose:** Atmospheric data specifications
-- **Features:**
-  - Humidity, pressure, wind speed
-  - Data table format
-  - Status indicator styling
-- **Styling:** Declassified specification sheet
-
-### ForecastDisplay.vue
-- **Purpose:** 5-day weather forecast
-- **Features:**
-  - Daily high/low temperatures
-  - Weather condition icons
-  - Date displayed alongside weekday
-  - Retro precipitation bar visualizing POP
-- **Styling:** Teletype transmission log
-
-### WeatherIcon.vue
-- **Purpose:** Weather condition visualization
-- **Features:**
-  - Icon code to visual mapping
-  - Responsive sizing
-  - Terminal-appropriate styling
-
----
-
-## Security & Configuration
+### GeoDB Endpoints
+- Prefix cities: `/v1/geo/cities?minPopulation=50000&namePrefix={q}&limit=10`
+- Prefix countries: `/v1/geo/countries?namePrefix={q}&limit=5&include=capital`
+- Exact cities: `/v1/geo/cities?minPopulation=100000&name={q}&limit=8`
+- Exact countries: `/v1/geo/countries?name={q}&limit=5&include=capital`
 
 ### Environment Variables
-```bash
-VITE_OPENWEATHER_API_KEY=your_api_key_here
-```
-
-### Security Measures
-- API keys stored in environment variables
-- `.env` files excluded from version control
-- No hardcoded credentials in source code
-- Input validation for city searches
-- Error handling for failed API requests
-
-### Build Configuration
-```javascript
-// vite.config.js
-export default defineConfig({
-  plugins: [vue(), vueDevTools()],
-  resolve: {
-    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) }
-  }
-})
-```
+- `VITE_OPENWEATHER_API_KEY`
+- `VITE_RAPIDAPI_KEY`
 
 ---
 
-## Development Workflow
+## Core Modules and Responsibilities
 
-### Available Scripts
-```bash
-npm run dev      # Start development server
-npm run build    # Production build
-npm run preview  # Preview production build
-npm run lint     # Code linting with auto-fix
-npm run lint:check # Code linting without fixes
-```
+### `src/App.vue`
+- Orchestrates fetching and rendering
+- Weather fetch by name or coordinates (axios)
+- In-memory cache (Map) for last selection; hydrates instantly, refreshes silently
+- Unit conversion in UI (C↔F; m/s→km/h or mph) with localStorage persistence
+- Live local time label (HH:MM:SS + GMT offset) updating every second
+- Error handling (404/401/others) with retro-styled panels
+- Retro loading overlay with tracking lines (minimal enforced time ~300ms)
 
-### Development Server
-- **Port:** 5173 (default)
-- **Hot Reload:** Enabled
-- **Vue DevTools:** Integrated
-- **TypeScript:** Real-time type checking
+### `src/components/CitySearch.vue`
+- Terminal-style search input with permanent output pane
+- Debounce (≈300ms) and strong input validation to block gibberish
+- Keyboard navigation (↑/↓, Enter, Esc)
+- Accessibility: aria-live on status and terminal logs
+- Emits `citySelected` with name/coords
 
-### Build Process
-1. **TypeScript Compilation:** Source code type checking
-2. **Vue SFC Processing:** Single File Component compilation
-3. **CSS Processing:** Tailwind compilation with PostCSS
-4. **Asset Optimization:** Vite bundling and minification
-5. **Code Splitting:** Automatic chunk optimization
+### `src/composables/useSearch.ts`
+- Four-stage search orchestration:
+  1) Prefix city
+  2) Prefix country (skipped if cities found)
+  3) Exact city (fallback)
+  4) Exact country (final fallback)
+- Progressive pre-validation via OpenWeather with badges: [--]/[CHK]/[OK]
+- Latest-only gating via AbortController; cancels stale validations
+- Caches: cityApiCache, countryApiCache, weatherValidationCache
+- Retries with exponential backoff + jitter; logs WAIT/OK/ERROR lines
+- Handles rate limits: detects 429, respects Retry-After, applies short global cooldown
 
----
+### `src/api/geoDB.ts`
+- Adds lightweight rate limiting:
+  - Per-request-family spacing (~1100ms)
+  - Global cooldown after any 429
+  - Parses Retry-After/x-ratelimit headers
+  - Supports AbortSignal in fetch
+- Endpoints for cities/countries (prefix and exact)
 
-## Project Structure
+### `src/api/openWeather.ts`
+- `validateSuggestion(suggestion, signal?)`
+  - Cities: coordinate-based validation with tolerance (~0.5°)
+  - Countries: capital-based validation with fallback to country name
+  - Requires core fields (weather, main.temp, coord, name)
+- `fetchWeatherData(suggestion)`
+  - Returns complete weather JSON or null on failure
 
-```
-weather-app/
-├── src/
-│   ├── components/
-│   │   ├── CitySearch.vue      # Search interface
-│   │   ├── WeatherDisplay.vue  # Main weather display
-│   │   ├── WeatherDetails.vue  # Atmospheric data
-│   │   ├── ForecastDisplay.vue # 5-day forecast
-│   │   └── WeatherIcon.vue     # Weather icons
-│   ├── App.vue                 # Root component
-│   └── main.ts                 # Application entry point
-├── public/                     # Static assets
-├── .env                        # Environment variables (gitignored)
-├── .env.example               # Environment template
-├── package.json               # Dependencies and scripts
-├── tailwind.config.js         # Tailwind configuration
-├── vite.config.js             # Vite configuration
-├── eslint.config.js           # ESLint configuration
-└── tsconfig.json              # TypeScript configuration
-```
+### `src/components/WeatherDisplay.vue`
+- Left: City (and country), Local time label (per second)
+- Right: Icon + temperature; condition; FEELS LIKE; unit toggle
+- Emits `toggle-unit` to `App.vue`
 
----
+### `src/components/WeatherDetails.vue`
+- Humidity (%), wind speed, pressure
+- Terminal dotted-label style with icons
 
-## Features & Functionality
+### `src/components/ForecastDisplay.vue`
+- 5 cards with day, date, icon, high/low, precipitation%
+- Retro precipitation bar (width based on POP)
 
-### Core Features
-- [x] **Real-time Weather Data:** Current conditions and forecasts
-- [x] **City Search:** Dynamic location lookup
-- [x] **Responsive Design:** Mobile and desktop compatibility
-- [x] **Error Handling:** Graceful failure management
-- [x] **Loading States:** User feedback during API calls
+### `src/components/CelestialTracker.vue`
+- Sunrise/Sunset (timezone corrected), moon phase
+- Timezone label via `utils/formatters`
 
-### UI/UX Features
-- [x] **Terminal Aesthetics:** VCR/Teletext retro theme (VT323 in terminal areas)
-- [x] **Retro Loading/Glow:** Tracking lines overlay and terminal glow
-- [x] **Compact Layout:** No vertical page scrolling; internal scroll within terminal pane
+### `src/utils/formatters.ts`
+- `formatTimezoneOffset(offsetSeconds)` → `GMT+/-H[:MM]`
 
-### Technical Features
-- [x] **TypeScript:** Full type safety
-- [x] **Environment Variables:** Secure configuration
-- [x] **Code Linting:** Automated code quality
-- [x] **Hot Reload:** Development efficiency
-- [x] **Production Build:** Optimized deployment
+### `src/types/index.ts`
+- CitySuggestion, CountrySuggestion, UnifiedSuggestion, SearchStatus, CitySelectedEvent
 
 ---
 
-## Quality Assurance
-
-### Code Quality
-- **ESLint:** Automated linting with Vue and TypeScript rules
-- **Type Safety:** Full TypeScript implementation
-- **Component Testing:** Manual testing protocols
-- **API Error Handling:** Comprehensive error states
-
-### Performance
-- **Bundle Size:** Optimized with Vite tree-shaking
-- **Loading Speed:** Minimal initial payload
-- **API Caching:** Browser-level HTTP caching
-- **Responsive Images:** Optimized asset delivery
-
-### Browser Compatibility
-- **Modern Browsers:** Chrome 90+, Firefox 88+, Safari 14+
-- **ES2020 Support:** Required for optimal performance
-- **Mobile Responsive:** iOS Safari, Chrome Mobile
+## User Experience & Accessibility
+- No page scroll; terminal pane can scroll internally
+- VT323 for terminal/search areas
+- aria-live on status bar and terminal outputs
+- Emoji-free, clear system messages
+- Loading overlay uses animated tracking lines and blinking cursor
 
 ---
 
-## Deployment Specifications
-
-### Build Output
-- **Static Files:** HTML, CSS, JavaScript bundles
-- **Asset Optimization:** Minified and compressed
-- **Environment Variables:** Build-time injection
-
-### Hosting Requirements
-- **Static File Server:** Any CDN or web server
-- **HTTPS:** Required for production deployment
-- **Environment Variables:** Secure API key injection
-
-### Recommended Platforms
-- **Vercel:** Zero-config deployment
-- **Netlify:** Git-based deployment
-- **GitHub Pages:** Free static hosting
-- **AWS S3 + CloudFront:** Enterprise deployment
+## Performance & Reliability
+- Debounced input and strong pre-validation reduce wasted calls
+- Latest-only search cancels stale work
+- Rate-limit aware GeoDB client (spacing, cooldowns, Retry-After)
+- Background forecast loading after current weather
+- Minimal enforced loading overlay for consistent feel
 
 ---
 
-## Maintenance & Updates
-
-### Regular Maintenance
-- **Dependency Updates:** Monthly security patches
-- **API Key Rotation:** Quarterly key refresh
-- **Performance Monitoring:** Bundle size tracking
-- **Browser Testing:** Cross-platform validation
-
-### Future Enhancements
-- [ ] **Geolocation API:** Automatic location detection
-- [ ] **Weather Alerts:** Severe weather notifications
-- [ ] **Historical Data:** Past weather information
-- [ ] **Offline Mode:** Service worker implementation
-- [ ] **URL Sharing:** Encode selected city in the URL for sharing
+## Build, Lint, and Run
+- Dev: `npm run dev`
+- Build: `npm run build`
+- Preview: `npm run preview`
+- Lint: `npm run lint` / `npm run lint:check`
+- Vite base: `/vue-weather-project/` (configured for GitHub Pages)
 
 ---
 
-## Technical Support
-
-### Documentation
-- **API Documentation:** OpenWeatherMap API reference
-- **Vue.js Docs:** Official Vue 3 documentation
-- **Tailwind CSS:** Design system reference
-- **TypeScript:** Language documentation
-
-### Troubleshooting
-- **Build Issues:** Check Node.js version compatibility
-- **API Errors:** Verify environment variable configuration
-- **Styling Problems:** Confirm Tailwind CSS compilation
-- **Type Errors:** Review TypeScript interface definitions
+## Deployment
+- Static hosting (GitHub Pages/Netlify/Vercel) supported
+- For GitHub Pages, base is already set; publish `dist/`
+- CI/CD: ensure repository secrets for `VITE_OPENWEATHER_API_KEY` and `VITE_RAPIDAPI_KEY`
 
 ---
 
-*Last Updated: September 23, 2025*  
-*Document Version: 1.0*
+## Maintenance & Roadmap
+- Regular dependency updates and API key rotation
+- Future ideas: geolocation default, alerts, offline mode, URL sharing, basic unit tests
+
+---
+
+## Title and Metadata
+- Page title is set in `index.html` `<title>...</title>`
+- For dynamic titles (e.g., selected city), update `document.title` in `App.vue` after selection
