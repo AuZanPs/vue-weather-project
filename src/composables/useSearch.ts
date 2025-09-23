@@ -4,8 +4,8 @@
  * Provides unified search functionality across cities and countries
  */
 
-import { ref, reactive } from 'vue'
-import type { UnifiedSuggestion, SearchResult, SearchStatus, CitySuggestion, CountrySuggestion } from '../types'
+import { ref } from 'vue'
+import type { UnifiedSuggestion, SearchStatus, CitySuggestion, CountrySuggestion } from '../types'
 import { 
   fetchCitySuggestions, 
   fetchCountrySuggestions, 

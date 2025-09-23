@@ -4,6 +4,8 @@
  * Validates cities and countries against actual weather data
  */
 
+/// <reference types="vite/client" />
+
 import type { CitySuggestion, CountrySuggestion, UnifiedSuggestion } from '../types'
 
 // API Configuration
@@ -23,7 +25,6 @@ export async function validateSuggestion(suggestion: UnifiedSuggestion): Promise
     if (suggestion.type === 'city') {
       // Use coordinate-based validation for cities
       if (!suggestion.lat || !suggestion.lon) {
-        console.warn(`Missing coordinates for city ${suggestion.name}`)
         return false
       }
       url = `${BASE_URL}?lat=${suggestion.lat}&lon=${suggestion.lon}&appid=${OPENWEATHER_API_KEY}`
@@ -34,7 +35,6 @@ export async function validateSuggestion(suggestion: UnifiedSuggestion): Promise
         url = `${BASE_URL}?q=${encodeURIComponent(suggestion.capital)}&appid=${OPENWEATHER_API_KEY}`
       } else {
         // Fallback Method: Use country name directly if capital is missing
-        console.warn(`No capital available for ${suggestion.name}, using country name fallback`)
         url = `${BASE_URL}?q=${encodeURIComponent(suggestion.name)}&appid=${OPENWEATHER_API_KEY}`
       }
     }
@@ -42,7 +42,6 @@ export async function validateSuggestion(suggestion: UnifiedSuggestion): Promise
     const response = await fetch(url)
     
     if (!response.ok) {
-      console.warn(`Validation failed for ${suggestion.name}: ${response.status}`)
       return false
     }
 
@@ -50,15 +49,12 @@ export async function validateSuggestion(suggestion: UnifiedSuggestion): Promise
     
     // Additional validation: check if the response contains expected weather data
     if (!data.weather || !Array.isArray(data.weather) || data.weather.length === 0) {
-      console.warn(`Invalid weather data for ${suggestion.name}`)
       return false
     }
 
-    console.log(`✓ Validated ${suggestion.name} via OpenWeatherMap`)
     return true
 
   } catch (error) {
-    console.error(`Validation error for ${suggestion.name}:`, error)
     return false
   }
 }
@@ -97,7 +93,6 @@ export async function fetchWeatherData(suggestion: UnifiedSuggestion): Promise<a
     return await response.json()
 
   } catch (error) {
-    console.error(`Failed to fetch weather data for ${suggestion.name}:`, error)
     return null
   }
 }

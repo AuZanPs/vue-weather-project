@@ -4,26 +4,6 @@
  */
 
 /**
- * Converts a timezone identifier to a short abbreviation
- * @param timezone - IANA timezone identifier (e.g., "Asia/Jakarta", "Europe/London")
- * @returns Short timezone abbreviation (e.g., "WIB", "GMT+7", "BST")
- */
-export function getTimezoneAbbreviation(timezone: string): string {
-  try {
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: timezone,
-      timeZoneName: 'short',
-    });
-    const parts = formatter.formatToParts(new Date());
-    const tzPart = parts.find(part => part.type === 'timeZoneName');
-    return tzPart ? tzPart.value : ''; // e.g., "BST", "GMT+7", "WIB"
-  } catch (error) {
-    console.error("Failed to get timezone abbreviation:", error);
-    return ''; // Return an empty string on failure
-  }
-}
-
-/**
  * Converts a timezone offset in seconds to a GMT+/-X format abbreviation
  * @param offsetSeconds - Timezone offset in seconds from UTC
  * @returns GMT offset string (e.g., "GMT+7", "GMT-5", "GMT")

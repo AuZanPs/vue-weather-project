@@ -127,8 +127,8 @@ const suggestionsContainer = ref<HTMLElement>()
 const suggestionRefs = ref<(HTMLElement | null)[]>([])
 
 // Set suggestion element reference
-const setSuggestionRef = (el: HTMLElement | null, index: number) => {
-  if (suggestionRefs.value) {
+const setSuggestionRef = (el: any, index: number) => {
+  if (suggestionRefs.value && el instanceof HTMLElement) {
     suggestionRefs.value[index] = el
   }
 }

@@ -32,11 +32,6 @@ export interface UnifiedSuggestion {
   capital?: string // For country suggestions - used for validation
 }
 
-export interface SearchResult {
-  suggestions: UnifiedSuggestion[]
-  error: string | null
-}
-
 // Search State Types
 export type SearchStatus = 'idle' | 'fetching' | 'success' | 'no_results' | 'error'
 
@@ -50,11 +45,4 @@ export interface CitySelectedEvent {
   lat?: number
   lon?: number
   capital?: string
-}
-
-// API Helper Types
-export interface ApiResult<T> {
-  status: 'success' | 'error'
-  data: T[]
-  error?: string
 }

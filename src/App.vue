@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+/// <reference types="vite/client" />
+
+import { ref, onMounted, computed } from 'vue'
 import axios from 'axios'
 import CitySearch from './components/CitySearch.vue'
 import WeatherDisplay from './components/WeatherDisplay.vue'
@@ -108,12 +110,11 @@ const systemStatus = ref<SystemStatus | null>(null)
 const error = ref('')
 const weatherError = ref<string | null>(null) // Dedicated error state for weather API 404s
 const selectedUnit = ref<Unit>('metric')
-const currentCity = ref('Jakarta')
 const isAppLoading = ref<boolean>(false) // Global loading state for responsiveness
 
 // Use API key from environment variables
 // Make sure you have VITE_OPENWEATHER_API_KEY in your .env file
-const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY
+const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY as string
 const BASE_URL = 'https://api.openweathermap.org/data/2.5'
 
 // ARTIFICIAL LOADING DELAY FOR RETRO VCR EXPERIENCE
@@ -172,7 +173,6 @@ const getUVIndex = async (lat: number, lon: number): Promise<number> => {
     if (hour < 10 || hour > 14) return Math.floor(Math.random() * 5) + 3
     return Math.floor(Math.random() * 6) + 5 // Peak UV hours
   } catch (error) {
-    console.log('UV Index estimation fallback used')
     return Math.floor(Math.random() * 8) + 1
   }
 }
@@ -376,8 +376,6 @@ const getWeatherByCoordinates = async (lat: number, lon: number, displayName: st
       const weatherUrl = `${BASE_URL}/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`
       const forecastUrl = `${BASE_URL}/forecast?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`
       
-      console.log(`🎯 Fetching weather data using coordinates: (${lat}, ${lon})`)
-      
       // Enhanced error handling for OpenWeatherMap API
       const weatherResponse = await axios.get<WeatherApiResponse>(weatherUrl)
       
@@ -478,17 +476,10 @@ const getWeatherByCoordinates = async (lat: number, lon: number, displayName: st
 }
 
 const handleCitySelected = (cityData: { name: string; displayName: string; type: string; country?: string; countryCode?: string; lat?: number; lon?: number }) => {
-  console.log('🌍 City selected:', cityData)
-  
-  // Store the display name for UI purposes
-  currentCity.value = cityData.displayName || cityData.name
-  
   // Use coordinates for weather fetching if available (preferred method)
   if (cityData.lat && cityData.lon) {
-    console.log(`🎯 Using coordinates for weather fetch: (${cityData.lat}, ${cityData.lon})`)
     getWeatherByCoordinates(cityData.lat, cityData.lon, cityData.displayName || cityData.name, 'metric')
   } else {
-    console.log(`⚠️ No coordinates available, falling back to name-based search`)
     // Fallback to name-based search for countries or incomplete data
     const searchTerm = cityData.displayName || cityData.name
     getWeather(searchTerm, 'metric')

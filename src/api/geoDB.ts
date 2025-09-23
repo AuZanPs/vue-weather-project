@@ -4,6 +4,8 @@
  * Provides both prefix-based and exact-match search functionality
  */
 
+/// <reference types="vite/client" />
+
 import type { CitySuggestion, CountrySuggestion } from '../types'
 
 // API Configuration
@@ -41,7 +43,6 @@ export const fetchCitySuggestions = async (query: string): Promise<CitySuggestio
     const data = await response.json()
     return data.data || []
   } catch (error) {
-    console.error('Error fetching city suggestions:', error)
     throw error
   }
 }
@@ -68,7 +69,6 @@ export const fetchCountrySuggestions = async (query: string): Promise<CountrySug
     const data = await response.json()
     return data.data || []
   } catch (error) {
-    console.error('Error fetching country suggestions:', error)
     throw error
   }
 }
@@ -95,7 +95,6 @@ export const fetchExactCityMatch = async (query: string): Promise<CitySuggestion
     const data = await response.json()
     return data.data || []
   } catch (error) {
-    console.error('Error fetching exact city match:', error)
     throw error
   }
 }
@@ -122,7 +121,6 @@ export const fetchExactCountryMatch = async (query: string): Promise<CountrySugg
     const data = await response.json()
     return data.data || []
   } catch (error) {
-    console.error('Error fetching exact country match:', error)
     throw error
   }
 }
