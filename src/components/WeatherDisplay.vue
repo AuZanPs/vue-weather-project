@@ -29,9 +29,9 @@ const derivedCountry = computed(() => (weather.city?.includes(',') ? weather.cit
 </script>
 
 <template>
-  <div class="p-4 text-terminal-white">
+  <div class="p-3 sm:p-4 text-terminal-white">
     <!-- Two-column grid to align with details/celestial panels -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-center">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 items-center">
       <!-- Left: City on first line, Country on second; anchored to far left without squeezing -->
       <div class="min-w-0 lg:max-w-[40vw] justify-self-start">
         <div class="text-terminal-blue font-bold tracking-wide leading-tight text-2xl md:text-3xl lg:text-4xl whitespace-nowrap overflow-hidden text-ellipsis">

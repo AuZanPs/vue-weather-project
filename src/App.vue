@@ -463,7 +463,7 @@ onMounted(() => {
     </div>
   </div>
 
-  <div class="min-h-screen bg-terminal-bg text-terminal-white font-mono">
+  <div class="min-h-screen bg-terminal-bg text-terminal-white font-mono overflow-hidden">
   <div class="p-3">
   <div class="mb-3">
         <div class="text-xs mb-2 text-terminal-blue" style="font-family: 'VT323', 'IBM Plex Mono', monospace; font-size: 0.95rem;">

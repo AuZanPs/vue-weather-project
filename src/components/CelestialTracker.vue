@@ -45,11 +45,11 @@ const getMoonPhaseDisplay = (phase: number): { icon: string, description: string
 </script>
 
 <template>
-  <div class="p-4 text-terminal-white">
-    <div class="text-terminal-blue mb-2">
+  <div class="p-3 sm:p-4 text-terminal-white">
+    <div class="text-terminal-blue mb-1.5 sm:mb-2">
       [CELESTIAL TRACKER]
     </div>
-    <div class="space-y-1 font-mono text-sm">
+  <div class="space-y-1 font-mono text-xs sm:text-sm">
       <div class="flex">
         <span class="text-terminal-white flex items-center gap-2">
           <Icon name="Sunrise" class="text-terminal-blue" :size="16" :stroke-width="2" aria-hidden="true" />
