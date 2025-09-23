@@ -267,7 +267,7 @@ const handleSearchInput = () => {
       // Only proceed with search if input passes ALL validation
       performSearch(query)
     }
-  }, 200) // Reduced from 300ms to 200ms for faster response
+  }, 300)
 }
 
 // KEYBOARD NAVIGATION WITH AUTO-SCROLL

@@ -498,7 +498,7 @@ const handleCitySelected = (cityData: { name: string; displayName: string; type:
 }
 
 // Local time label computed from timezone offset
-// Live-updating local time: tick every 30s to keep minutes fresh without heavy intervals
+// Live-updating local time: tick every second for immediate updates
 const nowTick = ref(Date.now())
 let clockInterval: number | undefined
 
@@ -512,8 +512,9 @@ const localTimeLabel = computed(() => {
   const localMs = utcMs + offset * 1000
   const hh = new Date(localMs).getHours().toString().padStart(2, '0')
   const mm = new Date(localMs).getMinutes().toString().padStart(2, '0')
+  const ss = new Date(localMs).getSeconds().toString().padStart(2, '0')
   const tz = formatTimezoneOffset(offset)
-  return `${hh}:${mm} ${tz}`
+  return `${hh}:${mm}:${ss} ${tz}`
 })
 
 onMounted(() => {
@@ -528,10 +529,10 @@ onMounted(() => {
   // Always fetch in metric to store raw data
   getWeather('Jakarta', 'metric')
 
-  // Start lightweight clock tick
+  // Start lightweight clock tick (1s)
   clockInterval = window.setInterval(() => {
     nowTick.value = Date.now()
-  }, 30000)
+  }, 1000)
 })
 
 onBeforeUnmount(() => {

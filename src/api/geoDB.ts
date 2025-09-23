@@ -13,6 +13,51 @@ const RAPIDAPI_KEY = import.meta.env.VITE_RAPIDAPI_KEY || 'YOUR_RAPIDAPI_KEY_HER
 const RAPIDAPI_HOST = 'wft-geo-db.p.rapidapi.com'
 const BASE_URL = `https://${RAPIDAPI_HOST}/v1/geo`
 
+// Lightweight rate limiting within this module to avoid burst calls
+const lastCallAt = new Map<string, number>()
+const MIN_SPACING_MS = 1100
+const delay = (ms: number) => new Promise(res => setTimeout(res, ms))
+
+let cooldownUntil = 0
+const waitForCooldown = async () => {
+  const now = Date.now()
+  if (now < cooldownUntil) {
+    await delay(cooldownUntil - now)
+  }
+}
+
+const spaceRequests = async (key: string) => {
+  const now = Date.now()
+  const last = lastCallAt.get(key) || 0
+  const delta = now - last
+  if (delta < MIN_SPACING_MS) {
+    await delay(MIN_SPACING_MS - delta)
+  }
+  lastCallAt.set(key, Date.now())
+}
+
+function rateLimitError(response: Response): Error {
+  // Respect Retry-After if present, else RapidAPI reset headers, else fall back
+  const retryAfterHeader = response.headers.get('retry-after')
+  let retryAfterMs: number | undefined
+  if (retryAfterHeader) {
+    const seconds = parseInt(retryAfterHeader, 10)
+    if (!Number.isNaN(seconds)) retryAfterMs = Math.min(seconds * 1000, 5000)
+  }
+  const resetHeader = response.headers.get('x-ratelimit-requests-reset')
+  if (!retryAfterMs && resetHeader) {
+    const seconds = parseInt(resetHeader, 10)
+    if (!Number.isNaN(seconds)) retryAfterMs = Math.min(seconds * 1000, 5000)
+  }
+  const err: any = new Error(`GeoDB rate limit (429)`) 
+  err.code = 'RATE_LIMIT'
+  if (retryAfterMs) err.retryAfterMs = retryAfterMs
+  // engage a short global cooldown to reduce pressure
+  const cooldown = retryAfterMs ?? 1500
+  cooldownUntil = Date.now() + cooldown
+  return err
+}
+
 /**
  * Common headers for all GeoDB API requests
  */
@@ -25,18 +70,25 @@ const getHeaders = () => ({
  * STAGE 1: Fetch city suggestions using namePrefix (partial match)
  * Used for real-time search as user types
  */
-export const fetchCitySuggestions = async (query: string): Promise<CitySuggestion[]> => {
+export const fetchCitySuggestions = async (query: string, signal?: AbortSignal): Promise<CitySuggestion[]> => {
   if (query.length < 2) return []
 
   try {
+    await waitForCooldown()
+    await spaceRequests('geodb')
+    await spaceRequests('cities-prefix')
     // Use a simpler approach - trust the API more and filter less
     const url = `${BASE_URL}/cities?minPopulation=50000&namePrefix=${encodeURIComponent(query)}&limit=10`
     
     const response = await fetch(url, {
       method: 'GET',
-      headers: getHeaders()
+      headers: getHeaders(),
+      signal
     })
 
+    if (response.status === 429) {
+      throw rateLimitError(response)
+    }
     if (!response.ok) {
       throw new Error(`Cities API HTTP error! status: ${response.status}`)
     }
@@ -53,17 +105,24 @@ export const fetchCitySuggestions = async (query: string): Promise<CitySuggestio
  * STAGE 2: Fetch country suggestions using namePrefix (partial match)
  * Used when no cities are found matching the query
  */
-export const fetchCountrySuggestions = async (query: string): Promise<CountrySuggestion[]> => {
+export const fetchCountrySuggestions = async (query: string, signal?: AbortSignal): Promise<CountrySuggestion[]> => {
   if (query.length < 2) return []
 
   try {
+    await waitForCooldown()
+    await spaceRequests('geodb')
+    await spaceRequests('countries-prefix')
     const url = `${BASE_URL}/countries?namePrefix=${encodeURIComponent(query)}&limit=5&include=capital`
     
     const response = await fetch(url, {
       method: 'GET',
-      headers: getHeaders()
+      headers: getHeaders(),
+      signal
     })
 
+    if (response.status === 429) {
+      throw rateLimitError(response)
+    }
     if (!response.ok) {
       throw new Error(`Countries API HTTP error! status: ${response.status}`)
     }
@@ -80,17 +139,24 @@ export const fetchCountrySuggestions = async (query: string): Promise<CountrySug
  * STAGE 3: Fetch exact city match using name parameter
  * Used as fallback when prefix searches don't yield results
  */
-export const fetchExactCityMatch = async (query: string): Promise<CitySuggestion[]> => {
+export const fetchExactCityMatch = async (query: string, signal?: AbortSignal): Promise<CitySuggestion[]> => {
   if (query.length < 2) return []
 
   try {
+    await waitForCooldown()
+    await spaceRequests('geodb')
+    await spaceRequests('cities-exact')
     const url = `${BASE_URL}/cities?minPopulation=100000&name=${encodeURIComponent(query)}&limit=8`
     
     const response = await fetch(url, {
       method: 'GET',
-      headers: getHeaders()
+      headers: getHeaders(),
+      signal
     })
 
+    if (response.status === 429) {
+      throw rateLimitError(response)
+    }
     if (!response.ok) {
       throw new Error(`Exact Cities API HTTP error! status: ${response.status}`)
     }
@@ -117,17 +183,24 @@ export const fetchExactCityMatch = async (query: string): Promise<CitySuggestion
  * STAGE 4: Fetch exact country match using name parameter
  * Final fallback for comprehensive search coverage
  */
-export const fetchExactCountryMatch = async (query: string): Promise<CountrySuggestion[]> => {
+export const fetchExactCountryMatch = async (query: string, signal?: AbortSignal): Promise<CountrySuggestion[]> => {
   if (query.length < 2) return []
 
   try {
+    await waitForCooldown()
+    await spaceRequests('geodb')
+    await spaceRequests('countries-exact')
     const url = `${BASE_URL}/countries?name=${encodeURIComponent(query)}&limit=5&include=capital`
     
     const response = await fetch(url, {
       method: 'GET',
-      headers: getHeaders()
+      headers: getHeaders(),
+      signal
     })
 
+    if (response.status === 429) {
+      throw rateLimitError(response)
+    }
     if (!response.ok) {
       throw new Error(`Exact Countries API HTTP error! status: ${response.status}`)
     }

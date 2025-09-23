@@ -74,7 +74,7 @@ export function useSearch() {
 
   // Persistent API search with retry logic
   const tryPersistentApiSearch = async <T>(
-    searchFunction: (query: string) => Promise<T[]>,
+    searchFunction: (query: string, signal?: AbortSignal) => Promise<T[]>,
     query: string,
     apiName: string,
     maxAttempts: number = 3
@@ -84,16 +84,32 @@ export function useSearch() {
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         addTerminalOutput(`[RETRY] ${apiName} - Attempt ${attempt}/${maxAttempts}`)
-        const results = await searchFunction(query)
+  const results = await searchFunction(query, currentAbortController?.signal)
         addTerminalOutput(`[OK] ${apiName} - Success. Found ${results.length} results`)
         return { status: 'success', data: results }
       } catch (error: any) {
-        addTerminalOutput(`[ERROR] ${apiName} - Attempt ${attempt} failed: ${error?.message ?? 'unknown error'}`)
+        const msg = error?.message ?? 'unknown error'
+        const isRateLimit = error && (error.code === 'RATE_LIMIT' || /429/.test(msg))
+        let waitMs: number
+        if (isRateLimit) {
+          // Prefer server-provided Retry-After if present
+          const retryAfterMs = (error && typeof error.retryAfterMs === 'number') ? error.retryAfterMs : undefined
+          // Backoff a bit longer on 429 and add jitter
+          const base = Math.pow(2, attempt) * 500
+          const jitter = Math.floor(Math.random() * 250)
+          waitMs = Math.min(retryAfterMs ?? (base + jitter), 5000)
+          addTerminalOutput(`[RATE] ${apiName} - Rate limited (429). Cooling down for ${waitMs}ms`)
+          addTerminalOutput(`[SYSTEM] To reduce API load, searches are briefly throttled`)
+        } else {
+          addTerminalOutput(`[ERROR] ${apiName} - Attempt ${attempt} failed: ${msg}`)
+          const base = Math.pow(2, attempt) * 300
+          const jitter = Math.floor(Math.random() * 150)
+          waitMs = Math.min(base + jitter, 3000)
+          addTerminalOutput(`[WAIT] ${apiName} - Retrying in ${waitMs}ms...`)
+        }
 
         if (attempt < maxAttempts) {
-          const delay = Math.pow(2, attempt) * 250 // Exponential backoff, faster cadence
-          addTerminalOutput(`[WAIT] ${apiName} - Retrying in ${delay}ms...`)
-          await new Promise(resolve => setTimeout(resolve, delay))
+          await new Promise(resolve => setTimeout(resolve, waitMs))
         }
       }
     }
@@ -185,28 +201,30 @@ export function useSearch() {
       }
 
       // === STAGE 2: Prefix Countries with Validation ===
-      addTerminalOutput(`[STAGE 2] Prefix Countries search...`)
-      const cachedCountries = countryApiCache.get(query)
-      const stage2Result = cachedCountries
-        ? { status: 'success' as const, data: cachedCountries }
-        : await tryPersistentApiSearch(fetchCountrySuggestions, query, 'Stage 2 - Prefix Countries')
+      if (allSuggestions.length === 0) {
+        addTerminalOutput(`[STAGE 2] Prefix Countries search...`)
+        const cachedCountries = countryApiCache.get(query)
+        const stage2Result = cachedCountries
+          ? { status: 'success' as const, data: cachedCountries }
+          : await tryPersistentApiSearch(fetchCountrySuggestions, query, 'Stage 2 - Prefix Countries')
 
-      if (stage2Result.status === 'success' && stage2Result.data.length > 0) {
-        const stage2Candidates = convertCountriesToUnified(stage2Result.data as CountrySuggestion[])
-        if (!cachedCountries) countryApiCache.set(query, stage2Result.data as CountrySuggestion[])
-        addTerminalOutput(`   [INFO] Found ${stage2Candidates.length} country candidates`)
-        const prevalidating = stage2Candidates.map(c => ({ ...c, validating: true }))
-        pushIfLatest(prevalidating)
-        ;(async () => {
-          const validated = await fastValidateBatch(stage2Candidates, abortController.signal)
-          if (thisSearchId !== currentSearchId) return
-          const validIds = new Set(validated.map(v => v.id))
-          suggestions.value = sortByValidation(suggestions.value.map(s =>
-            validIds.has(s.id) ? { ...s, validating: false, validated: true } : { ...s, validating: false }
-          ))
-        })()
-      } else {
-        addTerminalOutput(`   [NONE] No country candidates found for prefix search`)
+        if (stage2Result.status === 'success' && stage2Result.data.length > 0) {
+          const stage2Candidates = convertCountriesToUnified(stage2Result.data as CountrySuggestion[])
+          if (!cachedCountries) countryApiCache.set(query, stage2Result.data as CountrySuggestion[])
+          addTerminalOutput(`   [INFO] Found ${stage2Candidates.length} country candidates`)
+          const prevalidating = stage2Candidates.map(c => ({ ...c, validating: true }))
+          pushIfLatest(prevalidating)
+          ;(async () => {
+            const validated = await fastValidateBatch(stage2Candidates, abortController.signal)
+            if (thisSearchId !== currentSearchId) return
+            const validIds = new Set(validated.map(v => v.id))
+            suggestions.value = sortByValidation(suggestions.value.map(s =>
+              validIds.has(s.id) ? { ...s, validating: false, validated: true } : { ...s, validating: false }
+            ))
+          })()
+        } else {
+          addTerminalOutput(`   [NONE] No country candidates found for prefix search`)
+        }
       }
 
       // === STAGE 3: Exact Cities (Fallback) with Validation ===

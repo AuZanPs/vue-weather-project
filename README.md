@@ -1,5 +1,7 @@
 # Weather Terminal v2.1
 
+Live Demo: https://auzanps.github.io/vue-weather-project/
+
 A retro-futuristic weather application inspired by classic VCR/Teletext "blue screen" terminals — compact, no-scroll, and fast.
 
 ## Features
